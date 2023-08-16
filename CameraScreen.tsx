@@ -6,7 +6,6 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import CameraHeader from './components/CameraHeader';
 import SettingsModal from './components/SettingsModal';
 import { useCamera } from 'react-native-camera-hooks';
-import { takePicture } from 'react-native-camera-hooks/src/takePicture';
 import {GestureHandlerGestureEvent, PinchGestureHandler, State, GestureHandlerRootView } from 'react-native-gesture-handler'
 import { StatusBarBlurBackground } from './views/StatusBarBlurBackground';
 import { CaptureButton } from './views/CaptureButton';
@@ -25,6 +24,7 @@ const CameraScreen: React.FC = () => {
   const [showSettingModal, setShowSettingModal] = useState(false);
   const [selectedQualityStream, setSelectedQualityStream] = useState<CameraQuality>('high')
   const [zoom, setZoom] = useState(0);
+  const [selectedQualityForCapture, setSelectedQualityForCapture] = useState<CameraQuality>('medium');
 
   // ///new.....................
   // const camera = useRef<Camera>(null);
@@ -72,13 +72,15 @@ const CameraScreen: React.FC = () => {
     if(isRecording){
       await startRecording();
     }
+
+    setSelectedQualityForCapture(selectedQuality);
     console.log('Selected Camera Quality: ', selectedQuality);
   };
 
-  const takePicture1 = async () => {
+  const takePicture = async (quality: CameraQuality) => {
     if(cameraRef.current){
       try{
-        const options = {quality:0.5, base64: true}
+        const options = {quality: quality === 'low' ? 0.5 : 1, base64: true}
         const data: TakePictureResponse = await cameraRef.current.takePictureAsync(options);
 
         const base64Data:string | undefined = data.base64;
@@ -220,7 +222,7 @@ const CameraScreen: React.FC = () => {
             zoom={zoom}>
 
             <View style={styles.captureButtonContainer}>
-              <TouchableOpacity onPress={takePicture1} style={styles.captureButton}>
+              <TouchableOpacity onPress={() => takePicture(selectedQualityForCapture)} style={styles.captureButton}>
                 <View style={styles.captureButtonInner} />
               </TouchableOpacity>
             </View>

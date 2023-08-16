@@ -67,15 +67,30 @@ const QualityPreviewFrame: React.FC<QualityPreviewFrameProps> = ({
         
     }, [visible, isCameraReady]);
 
-    const handleQualitySelect = (quality: CameraQuality) => {
+    const handleQualitySelect = async (quality: CameraQuality) => {
         stopCameraPreview();
         setSelectedCameraQuality(quality);
         onQualitySelect(quality);
         
+        let videoQuality = RNCamera.Constants.VideoQuality["720p"];
+        if(quality === "low"){
+            RNCamera.Constants.VideoQuality["480p"];
+        }
+        else if(quality === "high"){
+            RNCamera.Constants.VideoQuality["1080p"];
+        }
+
         const selectedCameraRef = cameraRefs[quality].current;
         if(selectedCameraRef){
             selectedCameraRef.resumePreview();
+            await selectedCameraRef.stopRecording();
+            selectedCameraRef.recordAsync({quality: videoQuality});
         }
+
+        // const selectedCameraRef = cameraRefs[quality].current;
+        // if(selectedCameraRef){
+        //     selectedCameraRef.resumePreview();
+        // }
         onClose();
     };
 
@@ -137,15 +152,7 @@ const QualityPreviewFrame: React.FC<QualityPreviewFrameProps> = ({
 };
 
 const styles = StyleSheet.create({
-    container: {
-        // flexDirection: 'row',
-        // flexWrap: 'wrap',
-        // justifyContent: 'space-between',
-        // alignItems: 'center',
-        // padding: 5,
-        // marginTop: 30,
-        // backgroundColor: 'rgba(0, 0, 0, 0.3)'
-        
+    container: {      
         flexDirection: 'row',
         justifyContent: 'space-between',
         padding: 20,
