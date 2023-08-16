@@ -17,6 +17,7 @@ import { useIsForeground } from './hooks/useIsForeground';
 import { useIsFocused } from '@react-navigation/native';
 
 type CameraQuality = 'low' | 'medium' | 'high';
+type FlashMode = "on" | "off";
 const CameraScreen: React.FC = () => {
   const cameraRef = useRef<RNCamera>(null);
   const [selectedCamera, setSelectedCamera] = useState<'front' | 'back'>('back');
@@ -25,6 +26,7 @@ const CameraScreen: React.FC = () => {
   const [selectedQualityStream, setSelectedQualityStream] = useState<CameraQuality>('high')
   const [zoom, setZoom] = useState(0);
   const [selectedQualityForCapture, setSelectedQualityForCapture] = useState<CameraQuality>('medium');
+  const [flashMode, setFlashMode] = useState<FlashMode>('off');
 
   // ///new.....................
   // const camera = useRef<Camera>(null);
@@ -58,10 +60,19 @@ const CameraScreen: React.FC = () => {
   //     console.error('Error loading sound: ', error);
   //   }
   // });
+
+  const toggleFlash = () => {
+    flashMode === 'off' ? setFlashMode('on') : setFlashMode('off');
+  }
+
   const handleSettingsPress = () => {
     setShowSettingModal(true);
     console.log("setting button pressed!");
   };
+
+  const handleFlashPress =() => {
+    
+  }
 
   const handleQualitySelect  = async(selectedQuality: CameraQuality) => {
     setShowSettingModal(false);
@@ -80,7 +91,7 @@ const CameraScreen: React.FC = () => {
   const takePicture = async (quality: CameraQuality) => {
     if(cameraRef.current){
       try{
-        const options = {quality: quality === 'low' ? 0.5 : 1, base64: true}
+        const options = {quality: quality === 'low' ? 0.5 : 1, base64: true, flashMode}
         const data: TakePictureResponse = await cameraRef.current.takePictureAsync(options);
 
         const base64Data:string | undefined = data.base64;
@@ -201,16 +212,11 @@ const CameraScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       
-      <CameraHeader onPressSettings={handleSettingsPress}/>
-      {/* <RNCamera
-        ref={cameraRef}
-        style={styles.cameraPreview}
-        type={selectedCamera}
-        captureAudio={true} 
-        flashMode={RNCamera.Constants.FlashMode.off}
-        
-        
-      /> */} 
+      <CameraHeader 
+      onPressSettings={handleSettingsPress}
+      onPressFlashToggle = {toggleFlash}
+      flashMode={flashMode}/>
+      
       <GestureHandlerRootView style = {{flex: 1}}>
         <PinchGestureHandler onGestureEvent={handlePinch} enabled>
           <RNCamera
