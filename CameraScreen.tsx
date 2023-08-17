@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Button } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Button, StatusBar } from 'react-native';
 import { RNCamera, TakePictureResponse, RNCameraProps } from 'react-native-camera';
 import RNFS from 'react-native-fs'
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -17,7 +17,7 @@ import { useIsForeground } from './hooks/useIsForeground';
 import { useIsFocused } from '@react-navigation/native';
 
 type CameraQuality = 'low' | 'medium' | 'high';
-type FlashMode = "on" | "off";
+type FlashMode = "auto" | "on" | "off" | "torch";
 const CameraScreen: React.FC = () => {
   const cameraRef = useRef<RNCamera>(null);
   const [selectedCamera, setSelectedCamera] = useState<'front' | 'back'>('back');
@@ -62,17 +62,21 @@ const CameraScreen: React.FC = () => {
   // });
 
   const toggleFlash = () => {
-    flashMode === 'off' ? setFlashMode('on') : setFlashMode('off');
+    // flashMode === 'off' ? setFlashMode('on') : setFlashMode('off');
+    // setFlashMode(flashMode === 'on' ? 'off' : 'on');
+    if (flashMode === 'off') {
+      setFlashMode('on');
+      console.info("flash mode is set to ON");
+    } else {
+      setFlashMode('off');
+      console.info("flash mode is set to OFF");
+    }
   }
 
   const handleSettingsPress = () => {
     setShowSettingModal(true);
     console.log("setting button pressed!");
   };
-
-  const handleFlashPress =() => {
-    
-  }
 
   const handleQualitySelect  = async(selectedQuality: CameraQuality) => {
     setShowSettingModal(false);
@@ -91,9 +95,15 @@ const CameraScreen: React.FC = () => {
   const takePicture = async (quality: CameraQuality) => {
     if(cameraRef.current){
       try{
-        const options = {quality: quality === 'low' ? 0.5 : 1, base64: true, flashMode}
-        const data: TakePictureResponse = await cameraRef.current.takePictureAsync(options);
 
+        if(flashMode === 'on'){
+        }
+
+        const options = {quality: quality === 'low' ? 0.5 : 1, base64: true, flashMode: flashMode}
+        console.log("Capturing picture with flash mode: ", flashMode);
+        const data: TakePictureResponse = await cameraRef.current.takePictureAsync(options);
+        const source = data.uri
+        console.info("source: ", source);
         const base64Data:string | undefined = data.base64;
         // console.info("base64Data: ", base64Data)
         if(base64Data){
@@ -177,7 +187,6 @@ const CameraScreen: React.FC = () => {
   const switchCamera = () => {
     setSelectedCamera((prevCamera) => (prevCamera === 'back' ? 'front' : 'back'));
   };
-
   const captureHandle = async() => {
     try{
       const data = await cameraRef.current?.takePictureAsync({quality: 1});
@@ -216,7 +225,6 @@ const CameraScreen: React.FC = () => {
       onPressSettings={handleSettingsPress}
       onPressFlashToggle = {toggleFlash}
       flashMode={flashMode}/>
-      
       <GestureHandlerRootView style = {{flex: 1}}>
         <PinchGestureHandler onGestureEvent={handlePinch} enabled>
           <RNCamera
@@ -270,8 +278,8 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    justifyContent: 'flex-end',
-    alignContent: 'flex-end'
+    justifyContent: 'center',
+    alignContent: 'center'
   },
   captureButtonContainer: {
     flex: 0,

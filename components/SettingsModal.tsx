@@ -21,11 +21,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
 
     const [showQualityOptions, setShowQualityOptions] = useState(false);
+    const [showNamingScheme, setShowNamingScheme] = useState(false);
     const handleQualityButtonPress = () => {
         onClose();
         setShowQualityOptions(true);
         
     };
+
+    const handleNamingSchemeButtonPress = () => {
+        onClose();
+        setShowNamingScheme(true);
+    };
+
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const modalContentWidth = windowWidth/2;
     const modalContentHeight = windowHeight * 0.5;
@@ -50,8 +57,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             {/* <Icon name="cog" size={30} color='white'/> */}
                             <Text style={Styles.qualityButtonText}>Quality Options</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={Styles.modalButtonDesign}>
-                            <Text style={Styles.modalButtonTextDesign}>Flash</Text>
+                        <TouchableOpacity style={Styles.modalButtonDesign} onPress={handleNamingSchemeButtonPress}>
+                            <Text style={Styles.modalButtonTextDesign}>Naming Scheme</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={Styles.modalButtonDesign}>
                             <Text style={Styles.modalButtonTextDesign}>Storage</Text>

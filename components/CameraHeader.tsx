@@ -5,7 +5,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 interface CameraHeaderProps{
     onPressSettings: () => void;
     onPressFlashToggle: () => void;
-    flashMode: 'off' | 'on';
+    flashMode: "auto" | "on" | "off" | "torch";
 }
 
 const CameraHeader: React.FC<CameraHeaderProps> = ({onPressSettings, onPressFlashToggle, flashMode}) => {
@@ -20,7 +20,7 @@ const CameraHeader: React.FC<CameraHeaderProps> = ({onPressSettings, onPressFlas
             <View style={styles.settingsButton}>
                 <TouchableOpacity onPress={onPressSettings}>
                     {/* <Icon name="settings-outline" size={24} color="white"/> */}
-                    <Image source={require('./img/setting_icon2.png')}/>
+                    <Image source={require('./img/setting_icon.png')}/>
                 </TouchableOpacity>
             </View>    
         </View>
