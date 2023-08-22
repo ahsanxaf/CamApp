@@ -3,8 +3,14 @@ import {View, TouchableOpacity, Text, StyleSheet, Modal, Dimensions, useWindowDi
 import {RNCameraProps} from 'react-native-camera'
 import Icon from 'react-native-vector-icons/FontAwesome';
 import QualityPreviewFrame from "./QualityPreviewFrame";
+import {useNavigation, RouteProp} from '@react-navigation/native';
+import {RootStackParamList} from '../navigations/AppNavigator'
+import { StackNavigationProp } from "@react-navigation/stack";
+import NamingSchemeScreen from "./NamingSchemeScreen";
+import {NavigationContainer} from '@react-navigation/native';
+import {createStackNavigator} from '@react-navigation/stack';
 
-
+const stack = createStackNavigator()
 type CameraQuality = 'low' | 'medium' | 'high';
 interface SettingsModalProps{
     visible: boolean;
@@ -17,11 +23,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     visible,
     selectedQuality,
     onClose,
-    onQualitySelect
+    onQualitySelect,
 }) => {
 
     const [showQualityOptions, setShowQualityOptions] = useState(false);
     const [showNamingScheme, setShowNamingScheme] = useState(false);
+
+    const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const handleQualityButtonPress = () => {
         onClose();
         setShowQualityOptions(true);
@@ -30,7 +38,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const handleNamingSchemeButtonPress = () => {
         onClose();
-        setShowNamingScheme(true);
+        // setShowNamingScheme(true);
+        navigation.navigate('NamingSchemeScreen');
     };
 
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();

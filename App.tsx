@@ -28,7 +28,8 @@ import {
 } from 'react-native/Libraries/NewAppScreen';
 
 import CameraScreen from './CameraScreen';
-import CameraScreen1 from './CameraScreen1';
+import AppNavigator from './navigations/AppNavigator';
+import {NamingSchemeProvider} from './components/NamingSchemeContext'
 
 type SectionProps = PropsWithChildren<{
   title: string;
@@ -42,7 +43,9 @@ function App(): JSX.Element {
   };
 
   return (
-   <CameraScreen/>
+    <NamingSchemeProvider>
+        <AppNavigator/>
+    </NamingSchemeProvider>
   );
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Button, StatusBar } from 'react-native';
 import { RNCamera, TakePictureResponse, RNCameraProps } from 'react-native-camera';
 import RNFS from 'react-native-fs'
@@ -15,10 +15,11 @@ import { useCameraDevices } from 'react-native-vision-camera';
 import { CONTENT_SPACING, MAX_ZOOM_FACTOR, SAFE_AREA_PADDING } from './components/Constants';
 import { useIsForeground } from './hooks/useIsForeground';
 import { useIsFocused } from '@react-navigation/native';
+import { CameraNamingScheme } from './types/NamingSchemeTypes';
 
 type CameraQuality = 'low' | 'medium' | 'high';
 type FlashMode = "auto" | "on" | "off" | "torch";
-const CameraScreen: React.FC = () => {
+const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   const cameraRef = useRef<RNCamera>(null);
   const [selectedCamera, setSelectedCamera] = useState<'front' | 'back'>('back');
   const [isRecording, setIsRecording] = useState(false);
@@ -27,6 +28,7 @@ const CameraScreen: React.FC = () => {
   const [zoom, setZoom] = useState(0);
   const [selectedQualityForCapture, setSelectedQualityForCapture] = useState<CameraQuality>('medium');
   const [flashMode, setFlashMode] = useState<FlashMode>('off');
+  const [namingScheme, setNamingScheme] = useState<CameraNamingScheme | null>(null);
 
   // ///new.....................
   // const camera = useRef<Camera>(null);
@@ -222,9 +224,9 @@ const CameraScreen: React.FC = () => {
     <View style={styles.container}>
       
       <CameraHeader 
-      onPressSettings={handleSettingsPress}
-      onPressFlashToggle = {toggleFlash}
-      flashMode={flashMode}/>
+        onPressSettings={handleSettingsPress}
+        onPressFlashToggle = {toggleFlash}
+        flashMode={flashMode}/>
       <GestureHandlerRootView style = {{flex: 1}}>
         <PinchGestureHandler onGestureEvent={handlePinch} enabled>
           <RNCamera
