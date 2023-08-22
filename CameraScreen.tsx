@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, ReactNode } from 'react';
+import React, { useState, useRef, useCallback, ReactNode, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Button, StatusBar } from 'react-native';
 import { RNCamera, TakePictureResponse, RNCameraProps } from 'react-native-camera';
 import RNFS from 'react-native-fs'
@@ -16,6 +16,7 @@ import { CONTENT_SPACING, MAX_ZOOM_FACTOR, SAFE_AREA_PADDING } from './component
 import { useIsForeground } from './hooks/useIsForeground';
 import { useIsFocused } from '@react-navigation/native';
 import { CameraNamingScheme } from './types/NamingSchemeTypes';
+import {useNamingScheme} from './components/NamingSchemeContext'
 
 type CameraQuality = 'low' | 'medium' | 'high';
 type FlashMode = "auto" | "on" | "off" | "torch";
@@ -28,7 +29,7 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   const [zoom, setZoom] = useState(0);
   const [selectedQualityForCapture, setSelectedQualityForCapture] = useState<CameraQuality>('medium');
   const [flashMode, setFlashMode] = useState<FlashMode>('off');
-  const [namingScheme, setNamingScheme] = useState<CameraNamingScheme | null>(null);
+   const { namingScheme, setNamingScheme } = useNamingScheme();
 
   // ///new.....................
   // const camera = useRef<Camera>(null);
@@ -94,13 +95,66 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
     console.log('Selected Camera Quality: ', selectedQuality);
   };
 
+  // const takePicture = async (quality: CameraQuality) => {
+  //   if(cameraRef.current){
+  //     try{
+
+  //       if(flashMode === 'on'){
+  //       }
+
+  //       const options = {quality: quality === 'low' ? 0.5 : 1, base64: true, flashMode: flashMode}
+  //       console.log("Capturing picture with flash mode: ", flashMode);
+  //       const data: TakePictureResponse = await cameraRef.current.takePictureAsync(options);
+  //       const source = data.uri
+  //       console.info("source: ", source);
+  //       const base64Data:string | undefined = data.base64;
+  //       // console.info("base64Data: ", base64Data)
+  //       if(base64Data){
+  //         const directoryName: string = "camApp"
+  //         const folderPath = `${RNFS.DocumentDirectoryPath}/DCIM/${directoryName}`;
+  //         // const folderPath = RNFS.CachesDirectoryPath + directoryName;
+  //         console.log("folder path: ", folderPath);
+        
+
+  //         const folderExists =  await RNFS.exists(folderPath);
+
+  //         if(!folderExists){
+  //           await RNFS.mkdir(folderPath, {NSURLIsExcludedFromBackupKey: true})
+  //         }
+
+  //         const filePath = `${folderPath}/picture_${Date.now()}.jpg`;
+
+  //         await RNFS.writeFile(filePath, base64Data, 'base64');
+
+  //         // Move the image to the gallery
+  //         // const newFilePath = `${RNFS.ExternalDirectoryPath}/DCIM/Camera/picture_${Date.now()}.jpg`;
+  //         // await RNFS.moveFile(filePath, newFilePath);
+
+  //         console.log('Picture saved successfully: ', filePath);
+  //         // SoundPlayer.playSoundFile('sounds/camera_shutter', 'mp3');
+
+  //         // if(cameraSound.isLoaded()){
+  //         //   cameraSound.play();
+  //         // }
+  //       }else{
+  //         console.error('Base64 data is undefined. Unable to save the  picture')
+  //       }
+  //     }
+  //     catch(error){
+  //       console.error('Failed to save picture: ', error);
+  //     }
+
+
+      
+  //     // console.log(data.uri);
+  //   }
+  // };
+
+ 
+
   const takePicture = async (quality: CameraQuality) => {
     if(cameraRef.current){
       try{
-
-        if(flashMode === 'on'){
-        }
-
         const options = {quality: quality === 'low' ? 0.5 : 1, base64: true, flashMode: flashMode}
         console.log("Capturing picture with flash mode: ", flashMode);
         const data: TakePictureResponse = await cameraRef.current.takePictureAsync(options);
@@ -109,6 +163,27 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
         const base64Data:string | undefined = data.base64;
         // console.info("base64Data: ", base64Data)
         if(base64Data){
+
+          let fileName = '';
+          if(namingScheme?.type === 'datetime'){
+            const currentDate = new Date();
+            const formattedDate = currentDate.toISOString().replace(/[:-]/g, '').split('.')[0];
+            fileName = `${namingScheme.prefix}_${formattedDate}`
+          }
+          else if(namingScheme?.type === 'sequence'){
+            fileName = `${namingScheme.prefix}_${namingScheme.sequence}`
+          }
+          else if(namingScheme?.type === 'datetime & sequence'){
+            const currentDate = new Date();
+            const formattedDate = currentDate.toISOString().replace(/[:-]/g, '').split('.')[0];
+            fileName = `${namingScheme.prefix}_${formattedDate}_${namingScheme.sequence}`;
+          }
+          else{
+            const currentDate = new Date();
+            const formattedDate = currentDate.toISOString().replace(/[:-]/g, '').split('.')[0];
+            fileName = `default_${formattedDate}`;
+          }
+
           const directoryName: string = "camApp"
           const folderPath = `${RNFS.DocumentDirectoryPath}/DCIM/${directoryName}`;
           // const folderPath = RNFS.CachesDirectoryPath + directoryName;
@@ -121,7 +196,8 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
             await RNFS.mkdir(folderPath, {NSURLIsExcludedFromBackupKey: true})
           }
 
-          const filePath = `${folderPath}/picture_${Date.now()}.jpg`;
+
+          const filePath = `${folderPath}/${fileName}.jpg`;
 
           await RNFS.writeFile(filePath, base64Data, 'base64');
 

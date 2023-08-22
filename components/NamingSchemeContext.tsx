@@ -1,7 +1,7 @@
 import React, { ReactNode, createContext, useContext, useState } from 'react';
 
 export type CameraNamingScheme = {
-    type: 'datetime' | 'sequence';
+    type: 'datetime' | 'sequence' | 'datetime & sequence'
     prefix: string;
     sequence?: string;
 };
@@ -25,7 +25,12 @@ export const NamingSchemeProvider: React.FC<{ children: ReactNode }> = ({ childr
     const [namingScheme, setNamingScheme] = useState<CameraNamingScheme>({
         type: 'datetime',
         prefix: '',
+        
     });
+
+    const updateNamingScheme = (newNamingScheme: CameraNamingScheme) => {
+        setNamingScheme(newNamingScheme);
+    };
 
     return (
         <NamingSchemeContext.Provider value={{ namingScheme, setNamingScheme }}>

@@ -11,6 +11,7 @@ import CheckBox from "@react-native-community/checkbox";
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import { CameraNamingScheme } from "../types/NamingSchemeTypes";
 import { RootStackParamList } from "../navigations/AppNavigator";
+import { useNamingScheme } from "./NamingSchemeContext";
 
 
 type NamingSchemeScreenRouteProp = RouteProp<RootStackParamList, 'NamingSchemeScreen'>;
@@ -19,49 +20,65 @@ const NamingSchemeScreen: React.FC<{route: NamingSchemeScreenRouteProp}> = ({rou
     const [useSequence, setUseSequence] = useState(false);
     const [sequence, setSequence] = useState('');
     const [prefix, setPrefix] = useState('');
+    const [sequenceError, setSequenceError] = useState("");
+    const { namingScheme, setNamingScheme } = useNamingScheme();
+
 
     const navigation = useNavigation();
     // const route = useRoute();
 
     const handleSave = () => {
-        let namingScheme: CameraNamingScheme;
-        if(useDateTime){
-            namingScheme = {
-                type: 'datetime',
-                prefix
+
+        if(useSequence){
+            if(!sequence){
+                setSequenceError('Sequence cannot be blank');
+                return;
+            }
+            else if(!/^[a-zA-Z0-9]+$/.test(sequence)){
+                setSequenceError("Sequence can only contain letters and numbers");
+                return;
             }
         }
-        else if(useSequence){
-            namingScheme = {
+
+        // let updatedNamingScheme: CameraNamingScheme = {
+        //     type: (useDateTime && useSequence) ? 'datetime & sequence' : 
+        //           (useDateTime ? 'datetime' : 'sequence'),
+        //     prefix,
+        //     sequence
+        // };
+
+        let updatedNamingScheme: CameraNamingScheme;
+        if (useDateTime && useSequence) {
+            updatedNamingScheme = {
+                type: 'datetime & sequence',
+                prefix,
+                sequence
+            };
+        } else if (useDateTime) {
+            updatedNamingScheme = {
+                type: 'datetime',
+                prefix
+            };
+        } else if (useSequence) {
+            updatedNamingScheme = {
                 type: 'sequence',
                 prefix,
                 sequence
             };
-
-            const nextSequence = String(Number(sequence) + 1);
-            setSequence(nextSequence);
-        }
-        else if(useDateTime && useSequence){
-            namingScheme = {
-                type: 'datetime & sequence',
+           
+        }else{
+            updatedNamingScheme = {
+                type: 'datetime',
                 prefix,
-                sequence
-            }
+            };
         }
+
+        setNamingScheme(updatedNamingScheme);
 
         navigation.goBack();
-        ToastAndroid.showWithGravity('Naming Scheme has been updated', ToastAndroid.SHORT, ToastAndroid.TOP)
+        ToastAndroid.showWithGravity('Naming Scheme has been updated', ToastAndroid.SHORT, ToastAndroid.CENTER)
 
-        // const updatedParams = route.params
-        // ? {
-        //       ...route.params,
-        //       setNamingScheme: namingScheme,
-        //   }
-        // : undefined;
-        // navigation.setParams({
-        //     ...route.params
-        //     setNamingScheme: namingScheme
-        // });
+       
     };
     return(
         <View style = {styles.container}>
@@ -92,12 +109,17 @@ const NamingSchemeScreen: React.FC<{route: NamingSchemeScreenRouteProp}> = ({rou
                 <Text style = {styles.checkboxLabel}>Use Sequence</Text>
             </View>
             {useSequence && (
-                <TextInput
-                    style={styles.input}
+                <View>
+                    <TextInput
+                    style={[styles.input, useSequence && sequenceError ? styles.inputError : null]}
                     placeholder="Enter Sequence"
                     value={sequence}
-                    onChangeText={setSequence}
-                />
+                    onChangeText={(newSequence) => {
+                        setSequence(newSequence);
+                        setSequenceError(""); // Clear the error when the user starts typing
+                    }}/>
+                    {sequenceError ? <Text style={styles.errorText}>{sequenceError}</Text> : null}
+                </View> 
             )}
             <TextInput
                 style={styles.input}
@@ -159,7 +181,15 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#34ebd8',
         textTransform: 'uppercase'
-    }
+    },
+    inputError: {
+        borderColor: "red",
+    },
+
+    errorText: {
+        color: "red",
+        marginBottom: 8,
+    },
     
 });
 
