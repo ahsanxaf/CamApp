@@ -150,7 +150,34 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   //   }
   // };
 
- 
+// const updateSequence = () => {
+//   const nextSequence = String(Number(namingScheme.sequence) + 1);
+//   setNamingScheme((prevScheme) => ({ ...prevScheme, sequence: nextSequence }));
+// };
+
+const updateSequence = () => {
+  const currentSequence = namingScheme.sequence || "";
+  const sequenceParts = currentSequence.split("_");
+  let newSequence = currentSequence;
+
+  if (sequenceParts.length > 1) {
+    // If the sequence already contains an underscore and a number, increment the number
+    const lastPart = sequenceParts[sequenceParts.length - 1];
+    if (!isNaN(parseInt(lastPart))) {
+      const newNumber = parseInt(lastPart) + 1;
+      newSequence = sequenceParts.slice(0, sequenceParts.length - 1).join("_") + "_" + newNumber;
+    } else {
+      // If the last part is not a number, simply add "_1" to the end
+      newSequence += "_1";
+    }
+  } else {
+    // If the sequence doesn't contain an underscore, add "_1" to the end
+    newSequence += "_1";
+  }
+
+  setNamingScheme((prevScheme) => ({ ...prevScheme, sequence: newSequence }));
+};
+
 
   const takePicture = async (quality: CameraQuality) => {
     if(cameraRef.current){
@@ -171,12 +198,14 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
             fileName = `${namingScheme.prefix}_${formattedDate}`
           }
           else if(namingScheme?.type === 'sequence'){
-            fileName = `${namingScheme.prefix}_${namingScheme.sequence}`
+            fileName = `${namingScheme.prefix} ${namingScheme.sequence}`
+            updateSequence();
           }
           else if(namingScheme?.type === 'datetime & sequence'){
             const currentDate = new Date();
             const formattedDate = currentDate.toISOString().replace(/[:-]/g, '').split('.')[0];
-            fileName = `${namingScheme.prefix}_${formattedDate}_${namingScheme.sequence}`;
+            fileName = `${namingScheme.prefix} ${formattedDate}_${namingScheme.sequence}`;
+            updateSequence();
           }
           else{
             const currentDate = new Date();
