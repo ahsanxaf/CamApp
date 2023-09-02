@@ -1,25 +1,17 @@
 import React, { useState, useRef, useCallback, ReactNode, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Button, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Button, StatusBar, Platform } from 'react-native';
 import { RNCamera, TakePictureResponse, RNCameraProps } from 'react-native-camera';
 import RNFS from 'react-native-fs'
-import Icon from 'react-native-vector-icons/FontAwesome';
 import CameraHeader from './components/CameraHeader';
 import SettingsModal from './components/SettingsModal';
-import { useCamera } from 'react-native-camera-hooks';
 import {GestureHandlerGestureEvent, PinchGestureHandler, State, GestureHandlerRootView } from 'react-native-gesture-handler'
-import { StatusBarBlurBackground } from './views/StatusBarBlurBackground';
-import { CaptureButton } from './views/CaptureButton';
-// import { useSharedValue } from 'react-native-reanimated';
-import { Camera } from 'react-native-vision-camera';
-import { useCameraDevices } from 'react-native-vision-camera';
-import { CONTENT_SPACING, MAX_ZOOM_FACTOR, SAFE_AREA_PADDING } from './components/Constants';
-import { useIsForeground } from './hooks/useIsForeground';
-import { useIsFocused } from '@react-navigation/native';
-import { CameraNamingScheme } from './types/NamingSchemeTypes';
-import {useNamingScheme} from './components/NamingSchemeContext'
+import {FlashMode, CameraQuality } from './types/Types';
+import {useNamingScheme} from './contexts/NamingSchemeContext';
+import { request, PERMISSIONS } from 'react-native-permissions';
 
-type CameraQuality = 'low' | 'medium' | 'high';
-type FlashMode = "auto" | "on" | "off" | "torch";
+
+const APP_ALBUM_NAME = 'CamApp';
+
 const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   const cameraRef = useRef<RNCamera>(null);
   const [selectedCamera, setSelectedCamera] = useState<'front' | 'back'>('back');
@@ -29,40 +21,24 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   const [zoom, setZoom] = useState(0);
   const [selectedQualityForCapture, setSelectedQualityForCapture] = useState<CameraQuality>('medium');
   const [flashMode, setFlashMode] = useState<FlashMode>('off');
-   const { namingScheme, setNamingScheme } = useNamingScheme();
+  const { namingScheme, setNamingScheme } = useNamingScheme();
+  const [selectedSavePath, setSelectedSavePath] = useState<string>(''); // State to store the selected path for saving
 
-  // ///new.....................
-  // const camera = useRef<Camera>(null);
-  // // const Zoom = useSharedValue(0);
-  // const [flash, setFlash] = useState<'off' | 'on'>('off');
-  // const [isCameraInitialized, setIsCameraInitialized] = useState(false);
+ 
 
-  // const isFocussed = useIsFocused();
-  // const isForeground = useIsForeground();
-  // const isActive = isFocussed && isForeground;
-  // // const isPressingButton = useSharedValue(false);
-
-  // const devices = useCameraDevices();
-  // const device = devices[selectedCamera];
-  // const minZoom = device?.minZoom ?? 1;
-  // const maxZoom = Math.min(device?.maxZoom ?? 1, MAX_ZOOM_FACTOR);
-  // const supportsFlash = device?.hasFlash ?? false;
-
-  // // const setIsPressingButton = useCallback(
-  // //   (_isPressingButton: boolean) => {
-  // //     isPressingButton.value = _isPressingButton;
-  // //   },
-  // //   [isPressingButton],
-  // // );
-
-  // //end.....
-
-
-  // const cameraSound = new Sound('sounds/camera_shutter.mp3', Sound.MAIN_BUNDLE, (error) => {
-  //   if(error){
-  //     console.error('Error loading sound: ', error);
-  //   }
-  // });
+  const requestStoragePermission = async () => {
+    try {
+      const result = await request(PERMISSIONS.ANDROID.WRITE_EXTERNAL_STORAGE);
+  
+      if (result === 'granted') {
+        console.log('Storage permission granted');
+      } else {
+        console.log('Storage permission denied');
+      }
+    } catch (error) {
+      console.error('Error requesting storage permission:', error);
+    }
+  };
 
   const toggleFlash = () => {
     // flashMode === 'off' ? setFlashMode('on') : setFlashMode('off');
@@ -82,78 +58,11 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   };
 
   const handleQualitySelect  = async(selectedQuality: CameraQuality) => {
-    setShowSettingModal(false);
-    if(isRecording){
-      await stopRecording();
-    }
-    setSelectedQualityStream(selectedQuality);
-    if(isRecording){
-      await startRecording();
-    }
-
     setSelectedQualityForCapture(selectedQuality);
     console.log('Selected Camera Quality: ', selectedQuality);
   };
 
-  // const takePicture = async (quality: CameraQuality) => {
-  //   if(cameraRef.current){
-  //     try{
-
-  //       if(flashMode === 'on'){
-  //       }
-
-  //       const options = {quality: quality === 'low' ? 0.5 : 1, base64: true, flashMode: flashMode}
-  //       console.log("Capturing picture with flash mode: ", flashMode);
-  //       const data: TakePictureResponse = await cameraRef.current.takePictureAsync(options);
-  //       const source = data.uri
-  //       console.info("source: ", source);
-  //       const base64Data:string | undefined = data.base64;
-  //       // console.info("base64Data: ", base64Data)
-  //       if(base64Data){
-  //         const directoryName: string = "camApp"
-  //         const folderPath = `${RNFS.DocumentDirectoryPath}/DCIM/${directoryName}`;
-  //         // const folderPath = RNFS.CachesDirectoryPath + directoryName;
-  //         console.log("folder path: ", folderPath);
-        
-
-  //         const folderExists =  await RNFS.exists(folderPath);
-
-  //         if(!folderExists){
-  //           await RNFS.mkdir(folderPath, {NSURLIsExcludedFromBackupKey: true})
-  //         }
-
-  //         const filePath = `${folderPath}/picture_${Date.now()}.jpg`;
-
-  //         await RNFS.writeFile(filePath, base64Data, 'base64');
-
-  //         // Move the image to the gallery
-  //         // const newFilePath = `${RNFS.ExternalDirectoryPath}/DCIM/Camera/picture_${Date.now()}.jpg`;
-  //         // await RNFS.moveFile(filePath, newFilePath);
-
-  //         console.log('Picture saved successfully: ', filePath);
-  //         // SoundPlayer.playSoundFile('sounds/camera_shutter', 'mp3');
-
-  //         // if(cameraSound.isLoaded()){
-  //         //   cameraSound.play();
-  //         // }
-  //       }else{
-  //         console.error('Base64 data is undefined. Unable to save the  picture')
-  //       }
-  //     }
-  //     catch(error){
-  //       console.error('Failed to save picture: ', error);
-  //     }
-
-
-      
-  //     // console.log(data.uri);
-  //   }
-  // };
-
-// const updateSequence = () => {
-//   const nextSequence = String(Number(namingScheme.sequence) + 1);
-//   setNamingScheme((prevScheme) => ({ ...prevScheme, sequence: nextSequence }));
-// };
+ 
 
 const updateSequence = () => {
   const currentSequence = namingScheme.sequence || "";
@@ -179,10 +88,10 @@ const updateSequence = () => {
 };
 
 
-  const takePicture = async (quality: CameraQuality) => {
+  const takePicture = async (quality: CameraQuality, pathToDirectory: string) => {
     if(cameraRef.current){
       try{
-        const options = {quality: quality === 'low' ? 0.5 : 1, base64: true, flashMode: flashMode}
+        const options = {quality: quality === 'low' ? 0.4 : quality === 'medium' ? 0.7 : 1, base64: true, flashMode: flashMode}
         console.log("Capturing picture with flash mode: ", flashMode);
         const data: TakePictureResponse = await cameraRef.current.takePictureAsync(options);
         const source = data.uri
@@ -213,9 +122,10 @@ const updateSequence = () => {
             fileName = `default_${formattedDate}`;
           }
 
-          const directoryName: string = "camApp"
-          const folderPath = `${RNFS.DocumentDirectoryPath}/DCIM/${directoryName}`;
+          const directoryName: string = APP_ALBUM_NAME;
+          const folderPath = `${RNFS.PicturesDirectoryPath}/${directoryName}`;
           // const folderPath = RNFS.CachesDirectoryPath + directoryName;
+          // const folderPath = pathToDirectory;
           console.log("folder path: ", folderPath);
         
 
@@ -227,7 +137,11 @@ const updateSequence = () => {
 
 
           const filePath = `${folderPath}/${fileName}.jpg`;
-
+          const encodedUri = encodeURIComponent(filePath);
+          // console.warn('EncodedURI: ', encodedUri)
+          // const fileUri = `file://${encodedUri}`;
+          // console.info('File URI: ', fileUri);
+          requestStoragePermission();
           await RNFS.writeFile(filePath, base64Data, 'base64');
 
           // Move the image to the gallery
@@ -254,67 +168,10 @@ const updateSequence = () => {
     }
   };
 
-  const handlePressIn = () => {
-    if(!isRecording){
-      setIsRecording(true);
-      startRecording();
-    }
-  }
-
-  const handlePressOut = () => {
-    if(isRecording){
-      setIsRecording(false);
-      stopRecording();
-    }
-  }
-
-  const startRecording = async() => {
-    if(cameraRef.current){
-      try{
-        const videoOptions = {
-          quality: RNCamera.Constants.VideoQuality['1080p'],
-          maxDuration: 30
-        };
-        const data = await cameraRef.current.recordAsync(videoOptions);
-        console.log('Video recorded')
-      }
-      catch(error)
-      {
-        console.error('Error while recording video: ', error);
-      }
-    }
-  }
-
-  const stopRecording = async() => {
-    if(cameraRef.current){
-      cameraRef.current.stopRecording();
-    }
-  }
+ 
 
   const switchCamera = () => {
     setSelectedCamera((prevCamera) => (prevCamera === 'back' ? 'front' : 'back'));
-  };
-  const captureHandle = async() => {
-    try{
-      const data = await cameraRef.current?.takePictureAsync({quality: 1});
-      // console.log(data?.uri);
-      if(data?.uri){
-        const filePath =  data?.uri;
-        console.info(filePath);
-        const newFilePath = RNFS.ExternalDirectoryPath + '/mytest.jpg'
-        RNFS.moveFile(filePath, newFilePath)
-        .then(() => {
-          console.log("Image saved at: ", newFilePath);
-        }).catch(error => {
-          console.log(error);
-        })
-      }else{
-        console.log("Error capturing the picture: data.uri is undefined");
-      }
-       
-    }catch(error){
-      console.log("Error while capturing the picture: ", error)
-    }
   };
 
   const handlePinch = (event: GestureHandlerGestureEvent) => {
@@ -325,63 +182,68 @@ const updateSequence = () => {
     }
   };
 
+  const handleSelectedPath = async (path: string) => {
+    if(Platform.OS === 'android' && path.startsWith('content://')){
+      try {
+        // const localFolder = `${RNFS.DocumentDirectoryPath}/${Date.now()}.jpg`;
+        // await RNFS.copyFile(path, localFolder)
+        setSelectedSavePath(path);
+      } catch (error) {
+        console.error('Error copying file:', error);        
+      }
+    }
+    console.warn('pathtosave: ', selectedSavePath)
+  };
+
+
   return (
     <View style={styles.container}>
       
-      <CameraHeader 
-        onPressSettings={handleSettingsPress}
-        onPressFlashToggle = {toggleFlash}
-        flashMode={flashMode}/>
-      <GestureHandlerRootView style = {{flex: 1}}>
-        <PinchGestureHandler onGestureEvent={handlePinch} enabled>
-          <RNCamera
-            ref={cameraRef}
-            style={styles.cameraPreview}
-            type={selectedCamera}
-            captureAudio={true} 
-            flashMode={RNCamera.Constants.FlashMode.off}
-            zoom={zoom}>
+      <RNCamera
+        ref={cameraRef}
+        style={styles.cameraPreview}
+        type={selectedCamera}
+        captureAudio={true} 
+        flashMode={RNCamera.Constants.FlashMode.off}
+        zoom={zoom}>
 
-            <View style={styles.captureButtonContainer}>
-              <TouchableOpacity onPress={() => takePicture(selectedQualityForCapture)} style={styles.captureButton}>
-                <View style={styles.captureButtonInner} />
-              </TouchableOpacity>
-            </View>
+        {/* <View style={styles.top}></View> */}
+        <CameraHeader 
+          onPressSettings={handleSettingsPress}
+          onPressFlashToggle = {toggleFlash}
+          flashMode={flashMode}/>
 
-
-            
-          </RNCamera>
-        </PinchGestureHandler>
-      </GestureHandlerRootView>
-      {/* <CaptureButton
-            camera = {camera}
-            onMediaCaptured={takePicture1}
-            cameraZoom={Zoom}
-            minZoom={minZoom}
-            maxZoom={maxZoom}
-            flash={supportsFlash ? flash : 'off'}
-            enabled={isCameraInitialized && isActive}
-            setIsPressingButton={setIsPressingButton}/> */}
-       
-
-      <View style={styles.switchCameraButtonContainer}>
-        <TouchableOpacity onPress={switchCamera} style={styles.switchCameraButton}>
-          {/* <Icon name="sync" size={25} color="white" />  */}
-          <Image source={require('./assets/sync_icon.png')}/>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.captureButtonContainer}>
+          <TouchableOpacity onPress={() => takePicture(selectedQualityForCapture, selectedSavePath)} style={styles.captureButton}>
+            <View style={styles.captureButtonInner} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.switchCameraButtonContainer}>
+          <TouchableOpacity onPress={switchCamera} style={styles.switchCameraButton}>
+            {/* <Icon name="sync" size={25} color="white" />  */}
+            <Image source={require('./assets/sync_icon.png')}/>
+          </TouchableOpacity>
+        </View>         
+      </RNCamera>
+        
       <SettingsModal
         visible={showSettingModal}
         selectedQuality={selectedQualityStream}
         onClose={() => setShowSettingModal(false)}
-        onQualitySelect={handleQualitySelect }/>     
-        {/* <ParentComponent/>      */}
+        onQualitySelect={handleQualitySelect }
+        onSavePath={handleSelectedPath}/>     
+        
     </View>
   );
 };
 const styles = StyleSheet.create({
   cameraPreview: {
     flex: 1,
+  },
+  top: {
+    height: '3.3%',
+    backgroundColor: "black",
+    opacity: 0.5,
   },
   container: {
     flex: 1,
@@ -393,9 +255,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     position: 'absolute',
-    bottom: 20,
+    bottom: 0,
     left: 0,
     right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    padding: '5%'
   },
   captureButton: {
     padding: 13,

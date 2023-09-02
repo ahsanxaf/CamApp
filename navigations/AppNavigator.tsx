@@ -4,7 +4,7 @@ import {createStackNavigator, TransitionSpecs, CardStyleInterpolators } from '@r
 import SettingsModal from '../components/SettingsModal';
 import NamingSchemeScreen from '../components/NamingSchemeScreen';
 import CameraScreen from '../CameraScreen';
-import {CameraNamingScheme} from '../types/NamingSchemeTypes';
+import {CameraNamingScheme} from '../types/Types';
 
 
 export type RootStackParamList = {

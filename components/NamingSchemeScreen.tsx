@@ -9,9 +9,9 @@ ToastAndroid,
 } from 'react-native';
 import CheckBox from "@react-native-community/checkbox";
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
-import { CameraNamingScheme } from "../types/NamingSchemeTypes";
+import { CameraNamingScheme } from "../types/Types";
 import { RootStackParamList } from "../navigations/AppNavigator";
-import { useNamingScheme } from "./NamingSchemeContext";
+import { useNamingScheme } from "../contexts/NamingSchemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {Picker} from '@react-native-picker/picker';
 
@@ -26,7 +26,11 @@ const NamingSchemeScreen: React.FC<{route: NamingSchemeScreenRouteProp}> = ({rou
     const [isSaveEnabled, setIsSaveEnabled] = useState(true);
     const [previousSchemes, setPreviousSchemes] = useState<CameraNamingScheme[]>([]);
     const [selectedPreviousScheme, setSelectedPreviousScheme] = useState('');
+    // const [selectedPreviousScheme, setSelectedPreviousScheme] = useState<CameraNamingScheme | null>(null);
     const [showTextInput, setShowTextInput] = useState(true);
+    const [isCustomPrefix, setIsCustomPrefix] = useState(true);
+    const [isCustomSequence, setIsCustomSequence] = useState(true);
+    // const [selectedScheme, setSelectedScheme] = useState<CameraNamingScheme | null>(null);
 
 
     const navigation = useNavigation();
@@ -47,6 +51,55 @@ const NamingSchemeScreen: React.FC<{route: NamingSchemeScreenRouteProp}> = ({rou
 
         loadPreviousSchemes();
     }, []);
+
+    useEffect(() => {
+        if (selectedPreviousScheme) {
+          const selectedScheme = previousSchemes.find((scheme) => scheme.type === selectedPreviousScheme);
+          if (selectedScheme) {
+            setUseDateTime(selectedScheme.type === 'datetime');
+            setUseSequence(selectedScheme.type === 'sequence');
+      
+            if ('sequence' in selectedScheme) {
+              setSequence(selectedScheme.sequence);
+            }
+      
+            if ('prefix' in selectedScheme) {
+              setPrefix(selectedScheme.prefix);
+            }
+          }
+        }
+      }, [selectedPreviousScheme]);
+
+       useEffect(() => {
+        if (selectedPreviousScheme) {
+            const selectedScheme = previousSchemes.find((scheme) => scheme.type === selectedPreviousScheme);
+            if (selectedScheme) {
+                if (selectedScheme.type === 'datetime') {
+                    setUseDateTime(true);
+                    setUseSequence(false);
+                } else if (selectedScheme.type === 'sequence') {
+                    setUseDateTime(false);
+                    setUseSequence(true);
+                    setSequence(selectedScheme.sequence || '');
+                } else if (selectedScheme.type === 'datetime & sequence') {
+                    setUseDateTime(true);
+                    setUseSequence(true);
+                    setSequence(selectedScheme.sequence || '');
+                }
+                setPrefix(selectedScheme.prefix || '');
+                setShowTextInput(selectedScheme.type === 'sequence');
+            }
+        }
+    }, [selectedPreviousScheme, previousSchemes]);
+    // useEffect(() => {
+    //     // Update the input fields when a previous scheme is selected
+    //     if (selectedPreviousScheme) {
+    //         setUseDateTime(selectedPreviousScheme.type === 'datetime');
+    //         setUseSequence(selectedPreviousScheme.type === 'sequence');
+    //         setSequence(selectedPreviousScheme.sequence || '');
+    //         setPrefix(selectedPreviousScheme.prefix);
+    //     }
+    // }, [selectedPreviousScheme]);
 
     useEffect(() => {
         if (!useDateTime && !useSequence) {
@@ -139,7 +192,28 @@ const NamingSchemeScreen: React.FC<{route: NamingSchemeScreenRouteProp}> = ({rou
                 prefix,
                 sequence
             };
+        }else {
+            newScheme = {
+                type: 'datetime', 
+                prefix
+            };
         }
+        let newPrefix = prefix;
+        let newSequence = sequence;
+
+        if (!isCustomPrefix) {
+            newPrefix = typeof selectedPreviousScheme === 'object' ? selectedPreviousScheme : '';
+        }
+          
+        if (!isCustomSequence) {
+            newSequence = typeof selectedPreviousScheme === 'object' ? selectedPreviousScheme : '';
+        }
+
+        // const newScheme = {
+        // type: useDateTime && useSequence ? "datetime & sequence" : useDateTime ? "datetime" : "sequence",
+        // prefix: newPrefix,
+        // sequence: newSequence,
+        // };
         
         const updatedSchemes = [...previousSchemes, newScheme];
         AsyncStorage.setItem('previousSchemes', JSON.stringify(updatedSchemes))
@@ -151,9 +225,44 @@ const NamingSchemeScreen: React.FC<{route: NamingSchemeScreenRouteProp}> = ({rou
         });
 
         navigation.goBack();
+        setPrefix('');
+        setSequence('');
         ToastAndroid.showWithGravity('Naming Scheme has been updated ', ToastAndroid.SHORT, ToastAndroid.CENTER)
 
        
+    };
+
+    const clearPreviousSchemes = async () => {
+        try {
+          await AsyncStorage.removeItem('previousSchemes');
+          setPreviousSchemes([]);
+          ToastAndroid.showWithGravity('Previous schemes cleared', ToastAndroid.SHORT, ToastAndroid.CENTER);
+        } catch (error) {
+          console.error('Error clearing previous schemes:', error);
+        }
+    };
+    const handlePickerValueChange = (itemValue: React.SetStateAction<string>) => {
+        setSelectedPreviousScheme(itemValue);
+        const selectedScheme = previousSchemes.find((scheme) => scheme.type === itemValue);
+        if (selectedScheme) {
+            if (selectedScheme.type === 'datetime') {
+              setUseDateTime(true);
+              setUseSequence(false);
+              setPrefix(selectedScheme.prefix);
+              setSequence('');
+            } else if (selectedScheme.type === 'sequence') {
+              setUseDateTime(false);
+              setUseSequence(true);
+              setPrefix(selectedScheme.prefix);
+              setSequence(selectedScheme.sequence || '');
+            } else if (selectedScheme.type === 'datetime & sequence') {
+              setUseDateTime(true);
+              setUseSequence(true);
+              setPrefix(selectedScheme.prefix);
+              setSequence(selectedScheme.sequence || '');
+            }
+            setShowTextInput(selectedScheme.type === 'sequence');
+        }
     };
     return(
         <View style = {styles.container}>
@@ -204,31 +313,11 @@ const NamingSchemeScreen: React.FC<{route: NamingSchemeScreenRouteProp}> = ({rou
             )}
             <Picker
                 selectedValue={selectedPreviousScheme}
-                onValueChange={(itemValue) => {
-                    setSelectedPreviousScheme(itemValue);
-                    const selectedScheme = previousSchemes.find((scheme) => scheme.type === itemValue);
-                    if (selectedScheme) {
-                        if (selectedScheme.type === 'datetime') {
-                            setUseDateTime(true);
-                            setUseSequence(false);
-                        } else if (selectedScheme.type === 'sequence') {
-                            setUseDateTime(false);
-                            setUseSequence(true);
-                            setSequence(selectedScheme.sequence || '');
-                        } else if (selectedScheme.type === 'datetime & sequence') {
-                            setUseDateTime(true);
-                            setUseSequence(true);
-                            setSequence(selectedScheme.sequence || '');
-                        }
-                        setPrefix(selectedScheme.prefix);
-                        setShowTextInput(selectedScheme.type === 'sequence');
-                    }
-                }}
-            >
-                <Picker.Item label="Select a previous scheme" value="" />
-                {previousSchemes.map((scheme) => (
-                    <Picker.Item key={scheme.type} label={scheme.type} value={scheme.type} />
-                ))}
+                onValueChange= {handlePickerValueChange}>
+                    <Picker.Item label="Select from previous naming schemes" value="" />
+                    {previousSchemes.map((scheme) => (
+                        <Picker.Item key={scheme.type} label={scheme.prefix} value={scheme.prefix} />
+                    ))}
             </Picker>
 
             <TouchableOpacity 
@@ -236,6 +325,10 @@ const NamingSchemeScreen: React.FC<{route: NamingSchemeScreenRouteProp}> = ({rou
                 onPress={handleSave} 
                 disabled = {!isSaveEnabled}>
                 <Text style = {{color: 'white'}}>Save</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={{marginTop: '3%'}} onPress={clearPreviousSchemes}>
+                <Text>Clear Previous Schemes</Text>
             </TouchableOpacity>
 
         </View>
@@ -300,3 +393,80 @@ const styles = StyleSheet.create({
 });
 
 export  default NamingSchemeScreen;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// onValueChange={(itemValue) => {
+                //     setSelectedPreviousScheme(itemValue);
+                //     const selectedScheme = previousSchemes.find((scheme) => scheme.type === itemValue);
+                //     if (selectedScheme) {
+                //         if (selectedScheme.type === 'datetime') {
+                //             setUseDateTime(true);
+                //             setUseSequence(false);
+                //         } else if (selectedScheme.type === 'sequence') {
+                //             setUseDateTime(false);
+                //             setUseSequence(true);
+                //             setSequence(selectedScheme.sequence || '');
+                //         } else if (selectedScheme.type === 'datetime & sequence') {
+                //             setUseDateTime(true);
+                //             setUseSequence(true);
+                //             setSequence(selectedScheme.sequence || '');
+                //         }
+                //         setPrefix(selectedScheme.prefix);
+                //         setShowTextInput(selectedScheme.type === 'sequence');
+                //     }
+                // }}
+
+
+
+
+
+
+
+{/* <CheckBox
+                value={isCustomPrefix}
+                onValueChange={() => {
+                setIsCustomPrefix(!isCustomPrefix);
+            }}
+            />
+            <TextInput
+                style={styles.input}
+                placeholder="Enter Prefix"
+                value={isCustomPrefix ? prefix : selectedPreviousScheme}
+                onChangeText={(text) => {
+                setPrefix(text);
+                }}
+                editable={isCustomPrefix}
+            />
+            <CheckBox
+                value={isCustomSequence}
+                onValueChange={() => {
+                setIsCustomSequence(!isCustomSequence);
+                }}
+            />
+            <TextInput
+                style={[styles.input, useSequence && sequenceError ? styles.inputError : null]}
+                placeholder="Enter Sequence"
+                value={isCustomSequence ? sequence : selectedPreviousScheme}
+                onChangeText={(text) => {
+                setSequence(text);
+                setSequenceError("");
+                }}
+                editable={isCustomSequence}
+            /> */}

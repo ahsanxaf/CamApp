@@ -1,10 +1,9 @@
 import React, {useRef, useEffect, useState} from "react";
 import { Image, StyleSheet, TouchableOpacity, View, Modal, Text, useWindowDimensions } from 'react-native';
 import {RNCameraProps, RNCamera} from 'react-native-camera'
-import { BlurView } from '@react-native-community/blur';
+import { CameraQuality } from "../types/Types";
 
 
-type CameraQuality = 'low' | 'medium' | 'high'
 interface QualityPreviewFrameProps {
     visible: boolean;
     selectedQuality: CameraQuality;

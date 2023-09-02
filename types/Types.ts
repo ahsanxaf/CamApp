@@ -10,4 +10,9 @@ export type CameraNamingScheme = {
     prefix: string;
     sequence: string;
 };
+
+export type CameraQuality = 'low' | 'medium' | 'high'
+
+export type FlashMode = "auto" | "on" | "off" | "torch";
+
   

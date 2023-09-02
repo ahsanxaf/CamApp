@@ -10,14 +10,16 @@ import NamingSchemeScreen from "./NamingSchemeScreen";
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import StorageModal from "./StorageModal";
+import QualityModal from "./QualityModal";
+import { CameraQuality } from "../types/Types";
 
 const stack = createStackNavigator()
-type CameraQuality = 'low' | 'medium' | 'high';
 interface SettingsModalProps{
     visible: boolean;
     selectedQuality: CameraQuality
     onClose: () => void;
     onQualitySelect: (selectedQuality: CameraQuality) => void;
+    onSavePath: (path: string) => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -25,17 +27,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     selectedQuality,
     onClose,
     onQualitySelect,
+    onSavePath
 }) => {
 
     const [showQualityOptions, setShowQualityOptions] = useState(false);
     const [showNamingScheme, setShowNamingScheme] = useState(false);
     const [showStorageModal, setShowStorageModal] = useState(false);
+    const [showQualityModal, setShowQualityModal] = useState(false);
 
 
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const handleQualityButtonPress = () => {
         onClose();
-        setShowQualityOptions(true);
+        // setShowQualityOptions(true);
+        setShowQualityModal(true);
         
     };
 
@@ -57,13 +62,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const handleOverlayPress = () => {
         onClose();
     }
-
-    // const dynamicStyles = StyleSheet.flatten({
-    //     modalContent: {
-    //       width: modalContentWidth/2,
-    //       height: modalContentHeight
-    //     },
-    // });
     
     return(
         <View>
@@ -79,7 +77,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <TouchableOpacity style={Styles.modalButtonDesign} onPress={handleStorageButtonPress}>
                             <Text style={Styles.modalButtonTextDesign}>Storage</Text>
                         </TouchableOpacity>
-                        <StorageModal visible={showStorageModal} onClose={() => setShowStorageModal(false)} />
                         <TouchableOpacity style={Styles.modalButtonDesign}>
                             <Text style={Styles.modalButtonTextDesign}>Water Mark</Text>
                         </TouchableOpacity>
@@ -96,16 +93,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     </View>
                 </TouchableOpacity>
             </Modal>
-            <QualityPreviewFrame
+            {/* <QualityPreviewFrame
                 visible={showQualityOptions}
                 selectedQuality={selectedQuality}
                 onClose={() => setShowQualityOptions(false)}
-                onQualitySelect={onQualitySelect}/>
+                onQualitySelect={onQualitySelect}/> */}
+            <QualityModal visible={showQualityModal} onClose={() => setShowQualityModal(false)} onSelectQuality={onQualitySelect} SelectedQuality={selectedQuality} />
 
             <View style={{flex:1}}>
                 <StorageModal 
                     visible={showStorageModal} 
-                    onClose={() => setShowStorageModal(false)} />
+                    onClose={() => setShowStorageModal(false)}
+                    onSavePath={onSavePath} />
             </View>
         </View>
     );

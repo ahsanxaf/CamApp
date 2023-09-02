@@ -22,7 +22,7 @@ const CameraHeader: React.FC<CameraHeaderProps> = ({onPressSettings, onPressFlas
                     {/* <Icon name="settings-outline" size={24} color="white"/> */}
                     <Image source={require('./img/setting_icon.png')}/>
                 </TouchableOpacity>
-            </View>    
+            </View>  
         </View>
     );
 };
@@ -31,14 +31,15 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         paddingHorizontal: 16,
-        paddingTop: 16,
-        height: 56,
-        backgroundColor: 'white',
+        padding: 7,
+        height: '7%',
+        backgroundColor: 'black',
+        opacity: 0.5,
         // elevation: 4,
         // shadowColor: '#000',
         justifyContent: 'space-between',
-        alignContent: 'center',
-        top: 5,
+        alignItems: 'center',
+        top: 0,
         // left: 0,
         // right: 0,
         // shadowOffset: {

@@ -29,7 +29,8 @@ import {
 
 import CameraScreen from './CameraScreen';
 import AppNavigator from './navigations/AppNavigator';
-import {NamingSchemeProvider} from './components/NamingSchemeContext'
+import {NamingSchemeProvider} from './contexts/NamingSchemeContext'
+import {SelectedPathProvider} from './contexts/SelectedPathContext'
 
 type SectionProps = PropsWithChildren<{
   title: string;
