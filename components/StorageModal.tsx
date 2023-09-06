@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput, ToastAndroid } from 'react-native';
 import RNFS from 'react-native-fs';
 import DocumentPickerComponent from './DocumentPickerComponent';
 import { PERMISSIONS, request } from 'react-native-permissions';
@@ -10,7 +10,8 @@ interface StorageModalProps {
   onSavePath: (path: string) => void; // Callback function to send the selected path back
 }
 
-
+const defaultDirecoty: string = RNFS.PicturesDirectoryPath;
+console.info('defaultDirecoty: ', defaultDirecoty)
 
 const StorageModal: React.FC<StorageModalProps> = ({ visible, onClose, onSavePath }) => {
 
@@ -18,16 +19,24 @@ const StorageModal: React.FC<StorageModalProps> = ({ visible, onClose, onSavePat
   const [decoded, setDecoded] = useState('');
   const [useDefaultDirectory, setUseDefaultDirectory] = useState(true);
   const [showInputText, setShowInputText] = useState(false);
-  
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    if (isMounted) {
+      setUseDefaultDirectory(true);
+    } else {
+      setIsMounted(true);
+    }
+  }, [isMounted]);
 
   const handleDirectorySelected =  (uri: string) => {
-    console.warn('Selected URI: ', uri)
+    console.info('Selected URI: ', uri)
     try {
       const decodedPath = decodeURIComponent(uri.replace(/\%3A/g, '/').replace(/\%2F/g, '/'));
       setDecoded(decodedPath);
       console.info('Decoded URI: ', decodedPath)
       setSelectedPath(decodedPath);
-      console.warn('Selected path: ', selectedPath)
+      console.log('Selected path: ', selectedPath)
     }catch (error) {
       console.error('Error decoding path:', error);
     }
@@ -35,21 +44,20 @@ const StorageModal: React.FC<StorageModalProps> = ({ visible, onClose, onSavePat
 
   const handleSavePress = () => {
     if (useDefaultDirectory) {
-      onSavePath('Pictures'); // Use an empty string for the default directory
+      onSavePath(defaultDirecoty); // Use an empty string for the default directory
       setShowInputText(false); // Hide the input text for Default Directory
-    } else if (selectedPath) {
+    } else {
       onSavePath(selectedPath);
       setShowInputText(true); // Show the input text for Choose Path
     }
     onClose();
     setSelectedPath('');
+    ToastAndroid.showWithGravity('Path Updated', ToastAndroid.SHORT, ToastAndroid.BOTTOM);
   };
   const handleCancelPress = () => {
     onClose();
     setSelectedPath('');
   };
-
-  const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
 
   return (
     <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onClose}>
@@ -67,7 +75,7 @@ const StorageModal: React.FC<StorageModalProps> = ({ visible, onClose, onSavePat
             }}
               style={[styles.radioButton, useDefaultDirectory && styles.selectedRadioButton]}
             >
-              <Text style={{marginLeft: 5}}>Default Directory</Text>
+              <Text style={{marginLeft: 5, color: 'white'}}>Default Directory</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => {
@@ -76,7 +84,7 @@ const StorageModal: React.FC<StorageModalProps> = ({ visible, onClose, onSavePat
               }}
               style={[styles.radioButton, !useDefaultDirectory && styles.selectedRadioButton]}
             >
-              <Text style={{marginLeft: 5}}>Choose Path</Text>
+              <Text style={{marginLeft: 5, color: 'white'}}>Choose Path</Text>
             </TouchableOpacity>
           </View>
 

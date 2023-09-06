@@ -107,35 +107,23 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   const savePicture = async(data: string | undefined) => {
     if(data){
       const fileName = selectFileName(data);
-
       const directoryName: string = APP_ALBUM_NAME;
-      // const folderPath = `${RNFS.PicturesDirectoryPath}/${directoryName}`;
       requestStoragePermission();
       const folderPath = `${RNFS.ExternalStorageDirectoryPath}/${selectedSavePath}/${directoryName}`;
       console.log("folder path: ", folderPath);
-    
-
       const folderExists =  await RNFS.exists(folderPath);
-
       if(!folderExists){
         await RNFS.mkdir(folderPath, {NSURLIsExcludedFromBackupKey: true})
       }
-
-
       const filePath = `${folderPath}/${fileName}.jpg`;
-      // const encodedUri = encodeURIComponent(filePath);
-      console.warn('filePath: ', filePath)
-      // const fileUri = `file://${encodedUri}`;
-      // console.info('File URI: ', fileUri);
+      console.info('filePath: ', filePath)
       await RNFS.writeFile(filePath, data, 'base64');
-
       console.log('Picture saved successfully: ', filePath);
     }else{
       console.error('Base64 data is undefined. Unable to save the  picture')
     }
   }
 
-  
   const takePicture = async (quality: CameraQuality) => {
     if(cameraRef.current){
       try{
@@ -167,15 +155,15 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   };
  
   const handleSelectedPath = async (path: string) => {
-    if(Platform.OS === 'android' && path.startsWith('content://')){
-      const selectedDirectory = path.split('/').pop();
+    if(Platform.OS === 'android' && (path.startsWith('content://') || path.startsWith('/storage/'))){
       try {
+        const selectedDirectory = path.split('/').pop();
         setSelectedSavePath(selectedDirectory || '');
       } catch (error) {
         console.error('Error copying file:', error);        
       }
+      console.log('pathtosave: ', selectedSavePath)
     }
-    console.warn('pathtosave: ', selectedSavePath)
   };
 
 
