@@ -110,6 +110,7 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
       const directoryName: string = APP_ALBUM_NAME;
       requestStoragePermission();
       const folderPath = `${RNFS.ExternalStorageDirectoryPath}/${selectedSavePath}/${directoryName}`;
+      // const folderPath = `${RNFS.ExternalStorageDirectoryPath}/DCIM/test`;
       console.log("folder path: ", folderPath);
       const folderExists =  await RNFS.exists(folderPath);
       if(!folderExists){
@@ -157,8 +158,17 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   const handleSelectedPath = async (path: string) => {
     if(Platform.OS === 'android' && (path.startsWith('content://') || path.startsWith('/storage/'))){
       try {
-        const selectedDirectory = path.split('/').pop();
-        setSelectedSavePath(selectedDirectory || '');
+        let selectedDirectory = ''
+        const defaultDirectory = path.split('/').pop();
+        const segments = path.split('/'); // Split the URI by '/'
+        const indexOfPrimary = segments.indexOf('primary');
+        if (indexOfPrimary !== -1 && indexOfPrimary + 1 < segments.length) {
+          selectedDirectory = segments.slice(indexOfPrimary + 1).join('/');
+        } else {
+          console.log('Invalid URI'); 
+        }
+        
+        setSelectedSavePath(selectedDirectory || defaultDirectory || '');
       } catch (error) {
         console.error('Error copying file:', error);        
       }

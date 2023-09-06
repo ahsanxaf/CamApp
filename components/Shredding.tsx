@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, View, StyleSheet, TextInput, Button, PermissionsAndroid, Platform } from 'react-native';
+import { Text, View, StyleSheet, TextInput, Button, PermissionsAndroid, Platform, Alert } from 'react-native';
 import FilePickerComponent from './FilePickerComponent';
 import { PERMISSIONS, request } from 'react-native-permissions';
 import RNFS from 'react-native-fs';
@@ -64,8 +64,8 @@ const Shredding: React.FC = () => {
             const entropy = generateEntropy();
             const dataSizeInBytes = 1024 * 1024; // For example, 1 MB of data
             const randomData = entropy.repeat(dataSizeInBytes / entropy.length);
-            console.info('Random Data: ', randomData)
-            const filePath = `${RNFS.PicturesDirectoryPath}/camApp/ahsan 4_24.jpg`;
+            // console.info('Random Data: ', randomData)
+            const filePath = `${RNFS.ExternalStorageDirectoryPath}/DCIM/CamApp/_20230906T084221.jpg`;
             console.info('FilePath: ', filePath);
             const fileExists = await RNFS.exists(filePath);
             if(fileExists){
@@ -79,6 +79,9 @@ const Shredding: React.FC = () => {
                 // Finally, delete the file
                 await RNFS.unlink(filePath);
                 console.log('File securely deleted.');
+            }
+            else{
+                Alert.alert('No such file or directory exists', 'Please select a  file');
             }
             
         } catch (error) {
@@ -99,7 +102,7 @@ const Shredding: React.FC = () => {
             // console.warn("random Data: ", randomData)
             
             // Overwrite the file with random data
-            const filePath = `${RNFS.ExternalStorageDirectoryPath}/DCIM/CamApp/_20230905T103742.jpg`;
+            const filePath = `${RNFS.ExternalStorageDirectoryPath}/DCIM/CamApp/_20230906T082850.jpg`;
             
             await RNFS.writeFile(filePath, randomData, 'utf8');
             await RNFS.writeFile(filePath, randomData, 'utf8');
@@ -114,6 +117,7 @@ const Shredding: React.FC = () => {
         } catch (error) {
             console.error(`Error securely deleting file: ${error}`);
         }
+        setSelectedFile('')
     };
 
     const handleFileSelected =  (uri: string) => {``
@@ -139,7 +143,7 @@ const Shredding: React.FC = () => {
             />
           )}
           <View style={{margin: '10%', width: '80%'}}>
-            <Button title='Delete' onPress={secureDeleteFile1} />
+            <Button title='Delete' onPress={secureDeleteFile} />
           </View>
         </View>
     )
