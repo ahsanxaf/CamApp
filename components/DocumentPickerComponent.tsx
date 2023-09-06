@@ -1,20 +1,39 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import DocumentPicker, { pickDirectory } from 'react-native-document-picker';
+import { TouchableOpacity, Text, StyleSheet, View, Platform, ToastAndroid } from 'react-native';
+import DocumentPicker, { DocumentPickerOptions, pickDirectory } from 'react-native-document-picker';
 
 interface DocumentPickerComponentProps {
   onDirectorySelected: (uri: string) => void;
 }
 
+const allowedDirectories = ['DCIM', 'Pictures', 'Documents'];
+
 const DocumentPickerComponent: React.FC<DocumentPickerComponentProps> = ({ onDirectorySelected }) => {
   const pickDocument = async () => {
     try {
-      const selectedDirectory = await pickDirectory();
-    console.info('Selected Directory: ', selectedDirectory)
-      
+      const options: DocumentPickerOptions<'ios' | 'android'> = {
+        type: [DocumentPicker.types.allFiles],
+        copyTo: 'cachesDirectory', // You can specify other directories like 'downloadsDirectory', etc.
+      };
+
+      // Show the directory picker
+      const selectedDirectory = await pickDirectory(options);
+
       if (selectedDirectory) {
         const selectedDirectoryUri = selectedDirectory.uri;
-        onDirectorySelected(selectedDirectoryUri);
+
+        // Check if the selected directory is allowed
+        if (isDirectoryAllowed(selectedDirectoryUri)) {
+          onDirectorySelected(selectedDirectoryUri);
+        } else {
+          // Handle the case where the selected directory is not allowed
+          // console.warn('Selected directory is not allowed.');
+          ToastAndroid.showWithGravity(
+            'Selected Directory is not allowed',
+            ToastAndroid.SHORT,
+            ToastAndroid.CENTER,
+          );
+        }
       }
     } catch (err) {
       if (DocumentPicker.isCancel(err)) {
@@ -23,6 +42,18 @@ const DocumentPickerComponent: React.FC<DocumentPickerComponentProps> = ({ onDir
         throw err;
       }
     }
+  };
+
+  
+  // 'content://com.android.externalstorage.documents/tree/primary%3ADCIM', 
+
+  const isDirectoryAllowed = (directoryUri: string): boolean => {
+    // Extract the directory name from the URI
+    const decodedUri = decodeURIComponent(directoryUri.replace(/\%3A/g, '/').replace(/\%2F/g, '/'));
+    const directoryName = decodedUri.split('/').pop();
+    // console.info('directory name: ', directoryName)
+    // Check if the directory name is in the allowedDirectories array
+    return allowedDirectories.includes(directoryName || '');
   };
 
   return (

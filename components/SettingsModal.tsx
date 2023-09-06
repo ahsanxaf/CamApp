@@ -1,13 +1,10 @@
 import React, { useState } from "react";
-import {View, TouchableOpacity, Text, StyleSheet, Modal, Dimensions, useWindowDimensions} from 'react-native';
-import {RNCameraProps} from 'react-native-camera'
+import {View, TouchableOpacity, Text, StyleSheet, Modal, Dimensions, useWindowDimensions, Switch} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import QualityPreviewFrame from "./QualityPreviewFrame";
 import {useNavigation, RouteProp} from '@react-navigation/native';
 import {RootStackParamList} from '../navigations/AppNavigator'
 import { StackNavigationProp } from "@react-navigation/stack";
-import NamingSchemeScreen from "./NamingSchemeScreen";
-import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import StorageModal from "./StorageModal";
 import QualityModal from "./QualityModal";
@@ -20,6 +17,8 @@ interface SettingsModalProps{
     onClose: () => void;
     onQualitySelect: (selectedQuality: CameraQuality) => void;
     onSavePath: (path: string) => void;
+    isFramingLinesVisible: any,
+    onFramingLinesToggle: any
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -27,13 +26,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     selectedQuality,
     onClose,
     onQualitySelect,
-    onSavePath
+    onSavePath,
+    isFramingLinesVisible,
+    onFramingLinesToggle
 }) => {
 
     const [showQualityOptions, setShowQualityOptions] = useState(false);
     const [showNamingScheme, setShowNamingScheme] = useState(false);
     const [showStorageModal, setShowStorageModal] = useState(false);
     const [showQualityModal, setShowQualityModal] = useState(false);
+    const [isFramingLinesEnables, setIsFramingLinesEnabled] = useState(false);
 
 
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -62,6 +64,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const handleOverlayPress = () => {
         onClose();
     }
+
+    const  handleShreddingButtonPress = () => {
+        onClose();
+        navigation.navigate('Shredding');
+    }
     
     return(
         <View>
@@ -77,8 +84,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <TouchableOpacity style={Styles.modalButtonDesign} onPress={handleStorageButtonPress}>
                             <Text style={Styles.modalButtonTextDesign}>Storage</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={Styles.modalButtonDesign}>
-                            <Text style={Styles.modalButtonTextDesign}>Water Mark</Text>
+                        <TouchableOpacity style={Styles.modalButtonDesign} onPress={handleShreddingButtonPress}>
+                            <Text style={Styles.modalButtonTextDesign}>Shredding</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={Styles.modalButtonDesign}>
                             <Text style={Styles.modalButtonTextDesign}>Sound</Text>
@@ -86,9 +93,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <TouchableOpacity style={Styles.modalButtonDesign}>
                             <Text style={Styles.modalButtonTextDesign}>Location</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={Styles.modalButtonDesign}>
-                            <Text style={Styles.modalButtonTextDesign}>Framing Lines</Text>
-                        </TouchableOpacity>
+                        <View style={[Styles.toggleContainer, {width: '100%'}]}>
+                            <Text style={[Styles.modalButtonDesign, {marginTop: 0, color: 'yellow'}]}>Framing Lines</Text>
+                            <Switch
+                                value={isFramingLinesVisible}
+                                onValueChange={onFramingLinesToggle}
+                                trackColor={{ false: "grey", true: "green" }}
+                                thumbColor={isFramingLinesEnables ? "white" : "white"}
+                            />                        
+                        </View>
                         
                     </View>
                 </TouchableOpacity>
@@ -155,6 +168,16 @@ const Styles = StyleSheet.create({
     },
     settingModalParentView: {
 
+    },
+    toggleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 10,
+        paddingVertical: 3,
+        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+        borderRadius: 20,
+        marginTop: 20,
     },
 });
 

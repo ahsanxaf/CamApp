@@ -5,6 +5,7 @@ import SettingsModal from '../components/SettingsModal';
 import NamingSchemeScreen from '../components/NamingSchemeScreen';
 import CameraScreen from '../CameraScreen';
 import {CameraNamingScheme} from '../types/Types';
+import Shredding from '../components/Shredding';
 
 
 export type RootStackParamList = {
@@ -13,6 +14,7 @@ export type RootStackParamList = {
     CameraScreen: {
         setNamingScheme: (scheme: CameraNamingScheme) => void;
     };
+    Shredding: undefined;
 };
 
 const stack = createStackNavigator<RootStackParamList>();
@@ -33,16 +35,20 @@ const AppNavigator: React.FC = () => {
                     }}/>
 
                 <stack.Screen 
-                name='NamingSchemeScreen' 
-                component={NamingSchemeScreen} 
-                options={{
-                    title: 'Naming Scheme',
-                    // cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS
-                    transitionSpec: {
-                        open: TransitionSpecs.FadeInFromBottomAndroidSpec,
-                        close: TransitionSpecs.FadeInFromBottomAndroidSpec
-                    }
-                }}/>
+                    name='NamingSchemeScreen' 
+                    component={NamingSchemeScreen} 
+                    options={{
+                        title: 'Naming Scheme',
+                        // cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS
+                        transitionSpec: {
+                            open: TransitionSpecs.FadeInFromBottomAndroidSpec,
+                            close: TransitionSpecs.FadeInFromBottomAndroidSpec
+                        }
+                    }}/>
+
+                <stack.Screen
+                    name = 'Shredding'
+                    component={Shredding}/>
             </stack.Navigator>
         </NavigationContainer>
     );

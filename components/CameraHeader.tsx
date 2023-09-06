@@ -11,18 +11,14 @@ interface CameraHeaderProps{
 const CameraHeader: React.FC<CameraHeaderProps> = ({onPressSettings, onPressFlashToggle, flashMode}) => {
     return(
         <View style={styles.header}>
-            <View style={styles.flashOnButton}>
-                <TouchableOpacity onPress={onPressFlashToggle}>
-                    {/* <Icon name="settings-outline" size={24} color="white"/> */}
-                    <Image source = {flashMode==="on" ? require('../assets/flashoff_icon.png') : require('../assets/flashon_icon.png')}/>
-                </TouchableOpacity>
-            </View> 
-            <View style={styles.settingsButton}>
-                <TouchableOpacity onPress={onPressSettings}>
-                    {/* <Icon name="settings-outline" size={24} color="white"/> */}
-                    <Image source={require('./img/setting_icon.png')}/>
-                </TouchableOpacity>
-            </View>  
+            <TouchableOpacity onPress={onPressFlashToggle}>
+                {/* <Icon name="settings-outline" size={24} color="white"/> */}
+                <Image source = {flashMode==="off" ? require('../assets/flashoff_icon.png') : require('../assets/flash_icon.png')}/>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onPressSettings}>
+                {/* <Icon name="setting" size={24} color="white"/> */}
+                <Image source={require('../assets/settings_icon.png')}/>
+            </TouchableOpacity>  
         </View>
     );
 };
@@ -34,21 +30,12 @@ const styles = StyleSheet.create({
         padding: 7,
         height: '7%',
         backgroundColor: 'black',
-        opacity: 0.5,
-        // elevation: 4,
-        // shadowColor: '#000',
+        opacity: 0.3,
+        elevation: 4,
+        shadowColor: '#000',
         justifyContent: 'space-between',
         alignItems: 'center',
         top: 0,
-        // left: 0,
-        // right: 0,
-        // shadowOffset: {
-        //     width: 0,
-        //     height: 2,
-        // },
-        // shadowOpacity: 0.25,
-        // shadowRadius: 3.84,
-        // position: "relative"
     },
     flex: {
         flex: 1,
