@@ -13,7 +13,7 @@ const DocumentPickerComponent: React.FC<DocumentPickerComponentProps> = ({ onDir
     try {
       const options: DocumentPickerOptions<'ios' | 'android'> = {
         type: [DocumentPicker.types.allFiles],
-        copyTo: 'cachesDirectory', // You can specify other directories like 'downloadsDirectory', etc.
+        copyTo: 'cachesDirectory',
       };
 
       // Show the directory picker
@@ -26,8 +26,6 @@ const DocumentPickerComponent: React.FC<DocumentPickerComponentProps> = ({ onDir
         if (isSubdirectoryOfAllowedDirectory(selectedDirectoryUri)) {
           onDirectorySelected(selectedDirectoryUri);
         } else {
-          // Handle the case where the selected directory is not allowed
-          // console.warn('Selected directory is not allowed.');
           ToastAndroid.showWithGravity(
             'Selected Directory is not allowed',
             ToastAndroid.SHORT,
@@ -45,11 +43,9 @@ const DocumentPickerComponent: React.FC<DocumentPickerComponentProps> = ({ onDir
   };
 
   const isSubdirectoryOfAllowedDirectory = (directoryUri: string): boolean => {
-    // Extract the directory name from the URI
     const decodedUri = decodeURIComponent(directoryUri.replace(/\%3A/g, '/').replace(/\%2F/g, '/'));
     const directoryName = decodedUri.split('/').pop();
 
-    // Check if the directory name is in the allowedDirectories array
     if (allowedDirectories.includes(directoryName || '')) {
       return true; // The selected directory is one of the allowed root directories
     }
@@ -71,8 +67,6 @@ const DocumentPickerComponent: React.FC<DocumentPickerComponentProps> = ({ onDir
     // Extract the directory name from the URI
     const decodedUri = decodeURIComponent(directoryUri.replace(/\%3A/g, '/').replace(/\%2F/g, '/'));
     const directoryName = decodedUri.split('/').pop();
-    // console.info('directory name: ', directoryName)
-    // Check if the directory name is in the allowedDirectories array
     return allowedDirectories.includes(directoryName || '');
   };
 

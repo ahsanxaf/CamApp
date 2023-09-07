@@ -1,22 +1,35 @@
 import React, { useState, useRef, useCallback, ReactNode, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Button, StatusBar, Platform } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Image, 
+  StatusBar, 
+  Platform, 
+  ScrollView 
+} from 'react-native';
 import { RNCamera, TakePictureResponse, RNCameraProps } from 'react-native-camera';
 import RNFS from 'react-native-fs'
 import CameraHeader from './components/CameraHeader';
 import SettingsModal from './components/SettingsModal';
-import {GestureHandlerGestureEvent, PinchGestureHandler, State, GestureHandlerRootView } from 'react-native-gesture-handler'
 import {FlashMode, CameraQuality } from './types/Types';
 import {useNamingScheme} from './contexts/NamingSchemeContext';
 import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 
 const APP_ALBUM_NAME = 'CamApp';
 const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   const cameraRef = useRef<RNCamera>(null);
+  const buttonsScrollViewRef = useRef<ScrollView>(null);
   const [selectedCamera, setSelectedCamera] = useState<'front' | 'back'>('back');
   const [isRecording, setIsRecording] = useState(false);
+  const [videoUri, setVideoUri] = useState<string | null>(null);
+  const [recordingTime, setRecordingTime] = useState<number>(0);
+  const [timerIntervalId, setTimerIntervalId] = useState<NodeJS.Timeout | null>(null);
   const [showSettingModal, setShowSettingModal] = useState(false);
   const [selectedQualityStream, setSelectedQualityStream] = useState<CameraQuality>('high')
   const [selectedQualityForCapture, setSelectedQualityForCapture] = useState<CameraQuality>('medium');
@@ -24,6 +37,12 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   const { namingScheme, setNamingScheme } = useNamingScheme();
   const [selectedSavePath, setSelectedSavePath] = useState<string>(''); // State to store the selected path for saving
   const [isFramingLinesVisible, setIsFramingLinesVisible] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<'photo' | 'video'>('photo');
+
+  useEffect(() => {
+    StatusBar.setHidden(true);
+    setSelectedMode('photo')
+  }, []);
 
   const requestStoragePermission = async () => {
     try {
@@ -123,7 +142,31 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
     }else{
       console.error('Base64 data is undefined. Unable to save the  picture')
     }
-  }
+  };
+
+  const saveVideo = async (videoUri: string) => {
+    try {
+      // Create a directory to save the video
+      const directoryName = `${APP_ALBUM_NAME}`; 
+      const folderPath = `${RNFS.ExternalStorageDirectoryPath}/${selectedSavePath}/${directoryName}`;
+      const folderExists = await RNFS.exists(folderPath);
+  
+      if (!folderExists) {
+        await RNFS.mkdir(folderPath, { NSURLIsExcludedFromBackupKey: true });
+      }
+  
+      // Generate a unique file name or use a timestamp
+      const fileName = selectFileName(videoUri); // Customize the file name if needed
+      const filePath = `${folderPath}/${fileName}.mp4`;
+  
+      // Move the recorded video to the desired location
+      await RNFS.moveFile(videoUri, filePath);
+  
+      console.log('Video saved successfully:', filePath);
+    } catch (error) {
+      console.error('Failed to save video:', error);
+    }
+  };
 
   const takePicture = async (quality: CameraQuality) => {
     if(cameraRef.current){
@@ -150,6 +193,72 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
       // console.log(data.uri);
     }
   };
+  const startTimer = () => {
+    const timerInterval = setInterval(() => {
+      setRecordingTime((prevTime) => prevTime + 1);
+    }, 1000);
+    setTimerIntervalId(timerInterval);
+  };
+
+  const stopTimer = () => {
+    // Reset the timer and start from zero
+    if (timerIntervalId) {
+      clearInterval(timerIntervalId);
+      setTimerIntervalId(null);
+      setRecordingTime(0);
+    }
+  };
+
+  const startRecording = async () => {
+    if (cameraRef.current) {
+      try {
+        const options = {
+          quality: RNCamera.Constants.VideoQuality['480p'],
+          maxDuration: 500, // Maximum duration of the video (in seconds)
+        };
+        setIsRecording(true);
+        console.info("recording started")
+        const recording = await cameraRef.current.recordAsync(options);
+        setVideoUri(recording.uri);
+        console.log('videouri: ', videoUri)
+        stopTimer();
+        startTimer();              
+
+      } catch (error) {
+        console.error("Failed to start recording: ", error);
+      }
+    }
+  };
+  
+  const stopRecording = async () => {
+    if (cameraRef.current) {
+      try {
+        await cameraRef.current.stopRecording();
+        setIsRecording(false);
+        console.info("recording stoped")
+
+        // Stop the timer
+        stopTimer();
+
+        // Save the recorded video
+        if (videoUri) {
+          saveVideo(videoUri);
+        }
+
+      } catch (error) {
+        console.error("Failed to stop recording: ", error);
+      }
+    }
+  };
+
+  const formatRecordingTime = (timeInSeconds: number): string => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = timeInSeconds % 60;
+    const formattedMinutes = String(minutes).padStart(2, "0");
+    const formattedSeconds = String(seconds).padStart(2, "0");
+    return `${formattedMinutes}:${formattedSeconds}`;
+  };
+  
 
   const switchCamera = () => {
     setSelectedCamera((prevCamera) => (prevCamera === 'back' ? 'front' : 'back'));
@@ -176,21 +285,43 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
     }
   };
 
+  const handleModeSelect = (mode: 'photo' | 'video') => {
+    setSelectedMode(mode);
+    
+    // Calculate the offset based on the selected mode
+    const offset = mode === 'photo' ? 0 : 100; // Adjust the value as needed
+
+    // Scroll to the selected button
+    buttonsScrollViewRef.current?.scrollTo({ x: offset, animated: true });
+    // Stop recording if video mode is switched off
+    if (mode === 'photo' && isRecording) {
+      stopRecording();
+    }
+  };
+
 
   return (
-    <View style={styles.container}>
-      
+    <SafeAreaView style={styles.container}>
       <RNCamera
         ref={cameraRef}
         style={styles.cameraPreview}
         type={selectedCamera}
         captureAudio={true} 
-        flashMode={flashMode}>
+        flashMode={flashMode}
+        playSoundOnCapture={true}>
 
         <CameraHeader 
           onPressSettings={handleSettingsPress}
           onPressFlashToggle = {toggleFlash}
           flashMode={flashMode}/>
+
+        {isRecording && (
+          <View style={styles.timerContainer}>
+            <Text style={styles.timerText}>
+              {formatRecordingTime(recordingTime)}
+            </Text>
+          </View>
+        )}
 
           {isFramingLinesVisible && (
             <View style={styles.framingLinesContainer}>
@@ -202,18 +333,61 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
           )}
 
         <View style={styles.captureButtonContainer}>
-          <TouchableOpacity onPress={() => takePicture(selectedQualityForCapture)} style={styles.captureButton}>
-            <View style={styles.captureButtonInner} />
+          <TouchableOpacity
+            onPress={() => {
+              if (selectedMode === "photo") {
+                takePicture(selectedQualityForCapture);
+              } else if (selectedMode === "video") {
+                if (isRecording) {
+                  stopRecording();
+                } else {
+                  startRecording();
+                }
+              }
+            }}
+            style={styles.captureButton}>
+            <View
+              style={[
+                styles.captureButtonInner,
+                selectedMode === "video" ? styles.videoCaptureButtonInner : null,
+              ]}/>
           </TouchableOpacity>
-        </View>
-        <View style={styles.switchCameraButtonContainer}>
-          <TouchableOpacity onPress={switchCamera} style={styles.switchCameraButton}>
-            {/* <Icon name="sync" size={25} color="white" />  */}
-            <Image source={require('./assets/sync_icon.png')}/>
-          </TouchableOpacity>
-        </View>         
-      </RNCamera>
-        
+          <View style={styles.switchCameraButtonContainer}>
+            <TouchableOpacity onPress={switchCamera} style={styles.switchCameraButton}>
+              {/* <Icon name="sync" size={25} color="white" />  */}
+              <Image source={require('./assets/sync_icon.png')}/>
+            </TouchableOpacity>
+          </View> 
+        </View> 
+    </RNCamera>
+
+      <View style={{height: '4%', backgroundColor: 'black', bottom: '0%', justifyContent: 'center', }}>
+          <ScrollView
+            ref={buttonsScrollViewRef}
+            horizontal={true}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle = {styles.buttonsScrollView}>
+
+            <TouchableOpacity
+              style={[
+                styles.modeButton,
+                selectedMode === 'photo' ? styles.selectedModeButton : null,
+              ]}
+                onPress={() => handleModeSelect('photo')}>
+              <Text style={selectedMode === 'photo' ? styles.selectedModeText : styles.modeText}>Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.modeButton,
+                selectedMode === 'video' ? styles.selectedModeButton : null,
+              ]}
+              onPress={() => handleModeSelect('video')}>
+              <Text style={selectedMode === 'video' ? styles.selectedModeText : styles.modeText}>Video</Text>
+            </TouchableOpacity>
+
+          </ScrollView>
+      </View>
+      
       <SettingsModal
         visible={showSettingModal}
         selectedQuality={selectedQualityStream}
@@ -223,22 +397,17 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
         isFramingLinesVisible={isFramingLinesVisible}
         onFramingLinesToggle={() => setIsFramingLinesVisible(prev => !prev)} />     
         
-    </View>
+    </SafeAreaView>
   );
 };
 const styles = StyleSheet.create({
   cameraPreview: {
     flex: 1,
   },
-  top: {
-    height: '3.3%',
-    backgroundColor: "black",
-    opacity: 0.5,
-  },
   container: {
     flex: 1,
     justifyContent: 'center',
-    alignContent: 'center'
+    alignContent: 'center',
   },
   captureButtonContainer: {
     flex: 0,
@@ -290,7 +459,7 @@ const styles = StyleSheet.create({
   verticalLine: {
     width: 1,
     height: '100%',
-    backgroundColor: 'white', // Adjust color as needed
+    backgroundColor: 'white',
     position: 'absolute',
     left: '50%',
     marginLeft: -1,
@@ -298,10 +467,50 @@ const styles = StyleSheet.create({
   horizontalLine: {
     width: '100%',
     height: 1,
-    backgroundColor: 'white', // Adjust color as needed
+    backgroundColor: 'white', 
     position: 'absolute',
     top: '50%',
     marginTop: -1,
+  },
+  modeButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    backgroundColor: 'transparent',
+  },
+  selectedModeButton: {
+    backgroundColor: 'black', // Background color for the selected button
+  },
+  selectedModeText: {
+    color: 'yellow',
+    fontWeight: '700'
+  },
+  buttonsScrollView: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+  },
+  modeText: {
+    color: 'white'
+  },
+  videoCaptureButtonInner: {
+    backgroundColor: 'red', 
+  },
+  timerContainer: {
+    position: 'absolute',
+    top: 60,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  timerText: {
+    color: 'white',
+    fontSize: 16,
   },
   
 });
