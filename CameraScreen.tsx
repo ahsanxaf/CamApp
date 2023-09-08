@@ -38,6 +38,8 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   const [selectedSavePath, setSelectedSavePath] = useState<string>(''); // State to store the selected path for saving
   const [isFramingLinesVisible, setIsFramingLinesVisible] = useState(false);
   const [selectedMode, setSelectedMode] = useState<'photo' | 'video'>('photo');
+  const [isPaused, setIsPaused] = useState(false);
+  const [recordingIcon, setRecordingIcon] = useState<Element>();
 
   useEffect(() => {
     StatusBar.setHidden(true);
@@ -213,7 +215,7 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
     if (cameraRef.current) {
       try {
         const options = {
-          quality: RNCamera.Constants.VideoQuality['480p'],
+          quality: RNCamera.Constants.VideoQuality['720p'],
           maxDuration: 500, // Maximum duration of the video (in seconds)
         };
         setIsRecording(true);
@@ -299,6 +301,54 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
     }
   };
 
+  const handleRecordingStatusChange = () => {
+    if (!isRecording) {
+      // Start recording
+      starttRecording(); // Hide switch camera button during recording
+    } else if (isPaused) {
+      // Resume recording
+      resumeRecording();
+    } else {
+      // Pause recording
+      pauseRecording();
+    }
+  };
+
+  const starttRecording = async () => {
+    // ...
+    setIsRecording(true);
+    setIsPaused(false);
+    const pause = <Image source={require('./assets/pause_icon.png')}/>
+    setRecordingIcon(pause); // Change icon to pause
+    // ...
+  };
+
+  const pauseRecording = async () => {
+    if (cameraRef.current) {
+      try {
+        await cameraRef.current.pausePreview();
+        setIsPaused(true);
+        const play = <Image source={require('./assets/play_icon.png')}/>
+        setRecordingIcon(play); // Change icon to play
+      } catch (error) {
+        console.error('Failed to pause recording: ', error);
+      }
+    }
+  };
+
+  const resumeRecording = async () => {
+    if (cameraRef.current) {
+      try {
+        await cameraRef.current.resumePreview();
+        setIsPaused(false);
+        const pause = <Image source={require('./assets/pause_icon.png')}/>
+        setRecordingIcon(pause); // Change icon back to pause
+      } catch (error) {
+        console.error('Failed to resume recording: ', error);
+      }
+    }
+  };
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -345,18 +395,22 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
                 }
               }
             }}
-            style={styles.captureButton}>
+            style={[styles.captureButton, selectedMode === "video" && styles.recordingButton, isRecording && selectedMode==='video' && styles.recordingBackground]}>
             <View
               style={[
                 styles.captureButtonInner,
-                selectedMode === "video" ? styles.videoCaptureButtonInner : null,
-              ]}/>
+                selectedMode === "video" && isRecording && styles.recordingCaptureButtonInner, // Apply style for recording
+            ]}
+          />
           </TouchableOpacity>
           <View style={styles.switchCameraButtonContainer}>
-            <TouchableOpacity onPress={switchCamera} style={styles.switchCameraButton}>
-              {/* <Icon name="sync" size={25} color="white" />  */}
-              <Image source={require('./assets/sync_icon.png')}/>
-            </TouchableOpacity>
+            {!isRecording && (
+              <TouchableOpacity onPress={switchCamera} style={styles.switchCameraButton}>
+                {/* <Icon name="sync" size={25} color="white" />  */}
+                <Image source={require('./assets/sync_icon.png')}/>
+              </TouchableOpacity>
+            )}
+            
           </View> 
         </View> 
     </RNCamera>
@@ -512,6 +566,15 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
+  recordingCaptureButtonInner: {
+    backgroundColor: 'red', // Change background color when recording
+  },
+  recordingButton: {
+    borderColor: 'red', 
+  },
+  recordingBackground:{
+    backgroundColor: 'white'
+  }
   
 });
 export default CameraScreen;

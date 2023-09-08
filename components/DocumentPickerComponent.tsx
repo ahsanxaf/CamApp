@@ -11,7 +11,7 @@ const allowedDirectories = ['DCIM', 'Pictures', 'Documents'];
 const DocumentPickerComponent: React.FC<DocumentPickerComponentProps> = ({ onDirectorySelected }) => {
   const pickDocument = async () => {
     try {
-      const options: DocumentPickerOptions<'ios' | 'android'> = {
+        const options: DocumentPickerOptions<'ios' | 'android'> = {
         type: [DocumentPicker.types.allFiles],
         copyTo: 'cachesDirectory',
       };
@@ -61,14 +61,14 @@ const DocumentPickerComponent: React.FC<DocumentPickerComponentProps> = ({ onDir
   };
 
   
-  // 'content://com.android.externalstorage.documents/tree/primary%3ADCIM', 
+  // // 'content://com.android.externalstorage.documents/tree/primary%3ADCIM', 
 
-  const isDirectoryAllowed = (directoryUri: string): boolean => {
-    // Extract the directory name from the URI
-    const decodedUri = decodeURIComponent(directoryUri.replace(/\%3A/g, '/').replace(/\%2F/g, '/'));
-    const directoryName = decodedUri.split('/').pop();
-    return allowedDirectories.includes(directoryName || '');
-  };
+  // const isDirectoryAllowed = (directoryUri: string): boolean => {
+  //   // Extract the directory name from the URI
+  //   const decodedUri = decodeURIComponent(directoryUri.replace(/\%3A/g, '/').replace(/\%2F/g, '/'));
+  //   const directoryName = decodedUri.split('/').pop();
+  //   return allowedDirectories.includes(directoryName || '');
+  // };
 
   return (
     <TouchableOpacity style={styles.selectDirectoryButton} onPress={pickDocument}>

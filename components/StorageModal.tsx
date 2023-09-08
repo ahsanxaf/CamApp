@@ -21,6 +21,7 @@ const StorageModal: React.FC<StorageModalProps> = ({ visible, onClose, onSavePat
   const [showInputText, setShowInputText] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
+
   useEffect(() => {
     if (isMounted) {
       setUseDefaultDirectory(true);
@@ -44,8 +45,8 @@ const StorageModal: React.FC<StorageModalProps> = ({ visible, onClose, onSavePat
 
   const handleSavePress = () => {
     if (useDefaultDirectory) {
-      onSavePath(defaultDirecoty); // Use an empty string for the default directory
-      setShowInputText(false); // Hide the input text for Default Directory
+      onSavePath(defaultDirecoty); 
+      setShowInputText(false); 
     } else {
       onSavePath(selectedPath);
       setShowInputText(true); // Show the input text for Choose Path
