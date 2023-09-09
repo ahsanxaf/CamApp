@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, ReactNode, useEffect } from 'react';
+import React, { useState, useRef, ReactNode, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -16,7 +16,6 @@ import SettingsModal from './components/SettingsModal';
 import {FlashMode, CameraQuality } from './types/Types';
 import {useNamingScheme} from './contexts/NamingSchemeContext';
 import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
-import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 

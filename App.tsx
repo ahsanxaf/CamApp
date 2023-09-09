@@ -21,20 +21,11 @@ import {
 
 import {
   Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
-
-import CameraScreen from './CameraScreen';
 import AppNavigator from './navigations/AppNavigator';
 import {NamingSchemeProvider} from './contexts/NamingSchemeContext'
-import {SelectedPathProvider} from './contexts/SelectedPathContext'
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+
 
 function App(): JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
@@ -44,9 +35,11 @@ function App(): JSX.Element {
   };
 
   return (
-    <NamingSchemeProvider>
+    <View style={[{flex: 1}, backgroundStyle]}>
+      <NamingSchemeProvider>
         <AppNavigator/>
-    </NamingSchemeProvider>
+      </NamingSchemeProvider>
+    </View>
   );
 }
 

@@ -4,18 +4,8 @@ import {createStackNavigator, TransitionSpecs, CardStyleInterpolators } from '@r
 import SettingsModal from '../components/SettingsModal';
 import NamingSchemeScreen from '../components/NamingSchemeScreen';
 import CameraScreen from '../CameraScreen';
-import {CameraNamingScheme} from '../types/Types';
+import {CameraNamingScheme, RootStackParamList} from '../types/Types';
 import Shredding from '../components/Shredding';
-
-
-export type RootStackParamList = {
-    SettingsModal: undefined;
-    NamingSchemeScreen: undefined;
-    CameraScreen: {
-        setNamingScheme: (scheme: CameraNamingScheme) => void;
-    };
-    Shredding: undefined;
-};
 
 const stack = createStackNavigator<RootStackParamList>();
 

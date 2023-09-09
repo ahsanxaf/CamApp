@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
-import { Text, View, StyleSheet, TextInput, Button, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Text, View, StyleSheet, TextInput, Button, Alert, Animated, ToastAndroid } from 'react-native';
 import FilePickerComponent from './FilePickerComponent';
 import { PERMISSIONS, request } from 'react-native-permissions';
 import RNFS from 'react-native-fs';
-import CryptoJS from 'crypto-js';
+import PercentageCircle from 'react-native-percentage-circle';
 
 const Shredding: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState('');
   const [numberOfPasses, setNumberOfPasses] = useState(3); // Default to 3 passes
+  const [deletionInProgress, setDeletionInProgress] = useState(false);
+  const [deletionProgress, setDeletionProgress] = useState(0);
+
+  
+
 
   const requestStoragePermission = async () => {
     try {
@@ -24,16 +29,10 @@ const Shredding: React.FC = () => {
     }
   };
 
-  const generateRandomData = (sizeInBytes: number) => {
-    const words = CryptoJS.lib.WordArray.random(sizeInBytes);
-    const base64Data = CryptoJS.enc.Base64.stringify(words);
-    return base64Data;
-  };
-
   const secureDeleteFile = async () => {
     try {
       const entropy = generateEntropy();
-      const dataSizeInBytes = 1024 * 1024; // For example, 1 MB of data
+      const dataSizeInBytes = 1024 * 1024; 
       const randomData = entropy.repeat(dataSizeInBytes / entropy.length);
     //   console.log('random data: ', randomData)
       const filePath = `${RNFS.ExternalStorageDirectoryPath}/${selectedFile}`;
@@ -41,19 +40,30 @@ const Shredding: React.FC = () => {
 
       if (fileExists) {
         await requestStoragePermission();
+        setDeletionInProgress(true);
+        setDeletionProgress(0);
 
-        // Perform multiple overwrites with the specified number of passes
         for (let pass = 0; pass < numberOfPasses; pass++) {
           await RNFS.write(filePath, randomData, 0, 'base64');
+
+          // Update the progress
+          const progressPercentage = Math.floor(((pass + 1) / numberOfPasses) * 100);
+          setDeletionProgress(progressPercentage);
         }
 
-        // Finally, delete the file
         await RNFS.unlink(filePath);
+        setDeletionInProgress(false);
+        ToastAndroid.showWithGravity(
+          `File securely deleted with ${numberOfPasses} passes.`,
+          ToastAndroid.SHORT,
+          ToastAndroid.CENTER,
+        );
         console.log(`File securely deleted with ${numberOfPasses} passes.`);
       } else {
         Alert.alert('No such file or directory exists', 'Please select a file');
       }
     } catch (error) {
+      // setDeletionInProgress(false);
       console.error('Error securely deleting file:', error);
     }
   };
@@ -68,7 +78,7 @@ const Shredding: React.FC = () => {
         uri.replace(/\%3A/g, '/').replace(/\%2F/g, '/')
       );
       let selectedFileName = '';
-      const segments = decodedFilePath.split('/'); // Split the URI by '/'
+      const segments = decodedFilePath.split('/'); 
       const indexOfPrimary = segments.indexOf('primary');
       if (indexOfPrimary !== -1 && indexOfPrimary + 1 < segments.length) {
             selectedFileName = segments.slice(indexOfPrimary + 1).join('/');
@@ -108,8 +118,14 @@ const Shredding: React.FC = () => {
         }}
       />
       <View style={{ margin: '10%', width: '80%' }}>
-        <Button title="Delete" onPress={secureDeleteFile} />
+        <Button title="Delete" onPress={secureDeleteFile} disabled={!selectedFile} />
       </View>
+      {deletionInProgress && (
+        <View>
+          <PercentageCircle radius={35} percent={deletionProgress} color='green' borderWidth={10}></PercentageCircle>  
+        </View>
+      )}
+      
     </View>
   );
 };
@@ -136,5 +152,10 @@ const styles = StyleSheet.create({
     borderColor: 'gray',
     padding: 10,
     color: 'black',
+  },
+  bar: {
+    height: 20,
+    backgroundColor: 'green',
+    borderRadius: 10,
   },
 });

@@ -1,16 +1,12 @@
 import React, { useState } from "react";
 import {View, TouchableOpacity, Text, StyleSheet, Modal, Dimensions, useWindowDimensions, Switch} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import QualityPreviewFrame from "./QualityPreviewFrame";
 import {useNavigation, RouteProp} from '@react-navigation/native';
-import {RootStackParamList} from '../navigations/AppNavigator'
 import { StackNavigationProp } from "@react-navigation/stack";
-import {createStackNavigator} from '@react-navigation/stack';
 import StorageModal from "./StorageModal";
 import QualityModal from "./QualityModal";
-import { CameraQuality } from "../types/Types";
+import { CameraQuality, RootStackParamList } from "../types/Types";
 
-const stack = createStackNavigator()
 interface SettingsModalProps{
     visible: boolean;
     selectedQuality: CameraQuality
