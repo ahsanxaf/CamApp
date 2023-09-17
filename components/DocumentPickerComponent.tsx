@@ -23,9 +23,9 @@ const DocumentPickerComponent: React.FC<DocumentPickerComponentProps> = ({ onDir
         const selectedDirectoryUri = selectedDirectory.uri;
 
         // Check if the selected directory is allowed
-        if (isSubdirectoryOfAllowedDirectory(selectedDirectoryUri)) {
+        if (isDirectoryAllowed(selectedDirectoryUri)) {
           onDirectorySelected(selectedDirectoryUri);
-        } else {
+        }else {
           ToastAndroid.showWithGravity(
             'Selected Directory is not allowed',
             ToastAndroid.SHORT,
@@ -63,12 +63,12 @@ const DocumentPickerComponent: React.FC<DocumentPickerComponentProps> = ({ onDir
   
   // // 'content://com.android.externalstorage.documents/tree/primary%3ADCIM', 
 
-  // const isDirectoryAllowed = (directoryUri: string): boolean => {
-  //   // Extract the directory name from the URI
-  //   const decodedUri = decodeURIComponent(directoryUri.replace(/\%3A/g, '/').replace(/\%2F/g, '/'));
-  //   const directoryName = decodedUri.split('/').pop();
-  //   return allowedDirectories.includes(directoryName || '');
-  // };
+  const isDirectoryAllowed = (directoryUri: string): boolean => {
+    // Extract the directory name from the URI
+    const decodedUri = decodeURIComponent(directoryUri.replace(/\%3A/g, '/').replace(/\%2F/g, '/'));
+    const directoryName = decodedUri.split('/').pop();
+    return allowedDirectories.includes(directoryName || '');
+  };
 
   return (
     <TouchableOpacity style={styles.selectDirectoryButton} onPress={pickDocument}>

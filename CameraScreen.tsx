@@ -7,9 +7,13 @@ import {
   Image, 
   StatusBar, 
   Platform, 
-  ScrollView 
+  ScrollView, 
+  PanResponder,
+  Animated,
+  Dimensions,
+  Modal
 } from 'react-native';
-import { RNCamera, TakePictureResponse, RNCameraProps } from 'react-native-camera';
+import { RNCamera, TakePictureResponse } from 'react-native-camera';
 import RNFS from 'react-native-fs'
 import CameraHeader from './components/CameraHeader';
 import SettingsModal from './components/SettingsModal';
@@ -17,8 +21,6 @@ import {FlashMode, CameraQuality } from './types/Types';
 import {useNamingScheme} from './contexts/NamingSchemeContext';
 import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-
 
 const APP_ALBUM_NAME = 'CamApp';
 const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
@@ -37,8 +39,16 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   const [selectedSavePath, setSelectedSavePath] = useState<string>(''); // State to store the selected path for saving
   const [isFramingLinesVisible, setIsFramingLinesVisible] = useState(false);
   const [selectedMode, setSelectedMode] = useState<'photo' | 'video'>('photo');
-  const [isPaused, setIsPaused] = useState(false);
-  const [recordingIcon, setRecordingIcon] = useState<Element>();
+  const [playSoundOnCapture, setPlaySoundOnCapture] = useState(false);
+  const [isScanningEnabled, setIsScanningEnabled] = useState(false);
+  const [capturedDocumentImage, setCapturedDocumentImage] = useState<string | null | undefined>(null);
+  const [captureButtonPosition, setCaptureButtonPosition] = useState({ x: 0, y: 0 });
+  const [capturedPictures, setCapturedPictures] = useState<string[]>([]); // Store captured picture URIs
+  const [selectedPicture, setSelectedPicture] = useState<string | null>(null); // For full-screen display
+  const [isSaved, setIsSaved] = useState(false);
+
+  const screenWidth = Dimensions.get('window').width;
+  const buttonWidth = 100;
 
   useEffect(() => {
     StatusBar.setHidden(true);
@@ -59,6 +69,30 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
     }
   };
 
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderMove: (_, gestureState) => {
+      // Update the capture button's position based on the user's drag gesture
+      const newX = captureButtonPosition.x + gestureState.dx;
+  
+      // Ensure the capture button stays within the container boundaries
+      const containerWidth = screenWidth - buttonWidth;
+  
+      // Limit the drag to both left and right within the container boundaries
+      if (newX >= 0 && newX <= containerWidth) {
+        setCaptureButtonPosition({ x: newX, y: 0 });
+      }
+    },
+  });
+  
+  
+  const handleSoundToggle = (isSoundEnabled: boolean) => {
+    setPlaySoundOnCapture(isSoundEnabled);
+  };
+  const handleScanningToggle = (isScanningEnabled: boolean) => {
+    setIsScanningEnabled(isScanningEnabled);
+  };
   const toggleFlash = () => {
     flashMode === 'off' ? setFlashMode('on') : setFlashMode('off');
   }
@@ -126,6 +160,7 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
 
   const savePicture = async(data: string | undefined) => {
     if(data){
+      // console.info("data: ", data)
       const fileName = selectFileName(data);
       const directoryName: string = APP_ALBUM_NAME;
       requestStoragePermission();
@@ -138,8 +173,12 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
       }
       const filePath = `${folderPath}/${fileName}.jpg`;
       console.info('filePath: ', filePath)
-      await RNFS.writeFile(filePath, data, 'base64');
-      console.log('Picture saved successfully: ', filePath);
+      if (/^[A-Za-z0-9+/]+={0,2}$/.test(data)) {
+        await RNFS.writeFile(filePath, data, 'base64');
+        console.log('Picture saved successfully: ', filePath);
+      } else {
+        console.error('Invalid base64 data');
+      }
     }else{
       console.error('Base64 data is undefined. Unable to save the  picture')
     }
@@ -157,7 +196,7 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
       }
   
       // Generate a unique file name or use a timestamp
-      const fileName = selectFileName(videoUri); // Customize the file name if needed
+      const fileName = selectFileName(videoUri); 
       const filePath = `${folderPath}/${fileName}.mp4`;
   
       // Move the recorded video to the desired location
@@ -168,32 +207,89 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
       console.error('Failed to save video:', error);
     }
   };
+  
+  const takePicture = async () => {
+    if(isScanningEnabled){
+      captureDocument();
+      console.info('Captured Document: ', capturedDocumentImage);
+    }
+    else{
+      setCapturedDocumentImage(null);
+      if(cameraRef.current){
+        try{
+          const options = {
+            quality: selectedQualityForCapture === 'low' ? 0.4 : selectedQualityForCapture === 'medium' ? 0.7 : 1, 
+            base64: true, 
+            flashMode: flashMode,
+            forceUpOrientation: true,
+            fixOrientation: true,
+          }
+          console.log("Capturing picture with flash mode: ", flashMode);
+          const data: TakePictureResponse = await cameraRef.current.takePictureAsync(options);
+          const source = data.uri
+          console.info("source: ", source);
+          const base64Data:string | undefined = data.base64;
+          console.info('type of base64: ', typeof base64Data)
+          savePicture(base64Data);
+        }
+        catch(error){
+          console.error('Failed to save picture: ', error);
+        }
+   
+        // console.log(data.uri);
+      }
+    }
+  };
 
-  const takePicture = async (quality: CameraQuality) => {
-    if(cameraRef.current){
-      try{
+  const captureDocument = async () => {
+    if (cameraRef.current) {
+      try {
         const options = {
-          quality: quality === 'low' ? 0.4 : quality === 'medium' ? 0.7 : 1, 
-          base64: true, 
+          quality: selectedQualityForCapture === 'low' ? 0.4 : selectedQualityForCapture === 'medium' ? 0.7 : 1,
+          base64: true,
           flashMode: flashMode,
           forceUpOrientation: true,
           fixOrientation: true,
-        }
-        console.log("Capturing picture with flash mode: ", flashMode);
+        };
+  
         const data: TakePictureResponse = await cameraRef.current.takePictureAsync(options);
-        const source = data.uri
-        console.info("source: ", source);
-        const base64Data:string | undefined = data.base64;
-        console.info('type of base64: ', typeof base64Data)
-        savePicture(base64Data);
+        const source = data.uri;
+        const base64Data: string | undefined = data.base64;
+  
+        // Prepare the image data to send
+      //   const imageData = {
+      //     uri: source, // The captured image URI
+      //     base64: base64Data, // Base64 data of the image
+      //   };
+
+      //   fetch('http://127.0.0.1:5000/upload-image', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify(imageData),
+      // })
+      //   .then((response) => response.json())
+      //   .then((processedImage) => {
+      //     console.log('pprocessed Image: ', processedImage)
+      //     // Handle the processed image (scanned document)
+      //     // Save it to mobile storage if needed
+      //   })
+      //   .catch((error) => {
+      //     console.error('Error sending image:', error);
+      //   });
+        // Set the captured image in state
+      setCapturedPictures([...capturedPictures, source]);
+      } catch (error) {
+        console.error('Failed to capture document:', error);
       }
-      catch(error){
-        console.error('Failed to save picture: ', error);
-      }
- 
-      // console.log(data.uri);
+      
     }
   };
+
+
+
+
   const startTimer = () => {
     const timerInterval = setInterval(() => {
       setRecordingTime((prevTime) => prevTime + 1);
@@ -299,56 +395,39 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
       stopRecording();
     }
   };
-
-  const handleRecordingStatusChange = () => {
-    if (!isRecording) {
-      // Start recording
-      starttRecording(); // Hide switch camera button during recording
-    } else if (isPaused) {
-      // Resume recording
-      resumeRecording();
-    } else {
-      // Pause recording
-      pauseRecording();
+  const openPicture = (picture: string) => {
+    setSelectedPicture(picture);
+    setIsSaved(false);
+  };
+  
+  const closePicture = () => {
+    setSelectedPicture(null);
+  };
+  const saveDocument = async () => {
+    const selectedPictureBase64 = await convertToBase64();
+    if (selectedPictureBase64) {
+      savePicture(selectedPictureBase64);
+      setIsSaved(true);
     }
   };
-
-  const starttRecording = async () => {
-    // ...
-    setIsRecording(true);
-    setIsPaused(false);
-    const pause = <Image source={require('./assets/pause_icon.png')}/>
-    setRecordingIcon(pause); // Change icon to pause
-    // ...
-  };
-
-  const pauseRecording = async () => {
-    if (cameraRef.current) {
-      try {
-        await cameraRef.current.pausePreview();
-        setIsPaused(true);
-        const play = <Image source={require('./assets/play_icon.png')}/>
-        setRecordingIcon(play); // Change icon to play
-      } catch (error) {
-        console.error('Failed to pause recording: ', error);
-      }
+  const convertToBase64 = async () => {
+    try {
+      // Load the image data
+      const imageUri = selectedPicture;
+      const imageData = await RNFS.readFile(imageUri || '', 'base64');
+      return imageData;
+    } catch (error) {
+      console.error('Failed to convert to base64:', error);
+      return null;
     }
   };
-
-  const resumeRecording = async () => {
-    if (cameraRef.current) {
-      try {
-        await cameraRef.current.resumePreview();
-        setIsPaused(false);
-        const pause = <Image source={require('./assets/pause_icon.png')}/>
-        setRecordingIcon(pause); // Change icon back to pause
-      } catch (error) {
-        console.error('Failed to resume recording: ', error);
-      }
-    }
+  const deleteItemFromRow = (indexToDelete: number) => {
+    setCapturedPictures((prevPictures) =>
+      prevPictures.filter((_, index) => index !== indexToDelete)
+    );
   };
-
-
+ 
+  
   return (
     <SafeAreaView style={styles.container}>
       <RNCamera
@@ -357,7 +436,7 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
         type={selectedCamera}
         captureAudio={true} 
         flashMode={flashMode}
-        playSoundOnCapture={true}>
+        playSoundOnCapture={playSoundOnCapture}>
 
         <CameraHeader 
           onPressSettings={handleSettingsPress}
@@ -372,83 +451,138 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
           </View>
         )}
 
-          {isFramingLinesVisible && (
-            <View style={styles.framingLinesContainer}>
-              <View style={[styles.verticalLine, { left: '33.3333%' }]} />
-              <View style={[styles.verticalLine, { left: '66.6666%' }]} />
-              <View style={[styles.horizontalLine, { top: '33.3333%' }]} />
-              <View style={[styles.horizontalLine, { top: '66.6666%' }]} />
-            </View>
-          )}
+        {isFramingLinesVisible && (
+          <View style={styles.framingLinesContainer}>
+            <View style={[styles.verticalLine, { left: '33.3333%' }]} />
+            <View style={[styles.verticalLine, { left: '66.6666%' }]} />
+            <View style={[styles.horizontalLine, { top: '33.3333%' }]} />
+            <View style={[styles.horizontalLine, { top: '66.6666%' }]} />
+          </View>
+        )}
 
+        
         <View style={styles.captureButtonContainer}>
-          <TouchableOpacity
-            onPress={() => {
-              if (selectedMode === "photo") {
-                takePicture(selectedQualityForCapture);
-              } else if (selectedMode === "video") {
-                if (isRecording) {
-                  stopRecording();
-                } else {
-                  startRecording();
+          
+
+          <Animated.View  
+            {...panResponder.panHandlers}
+            style={[
+              styles.captureButtonContainer,
+              { left: captureButtonPosition.x },
+            ]}>
+            <TouchableOpacity
+              onPress={() => {
+                if (selectedMode === "photo") {
+                  takePicture();
+                } else if (selectedMode === "video") {
+                  if (isRecording) {
+                    stopRecording();
+                  } else {
+                    startRecording();
+                  }
                 }
-              }
-            }}
-            style={[styles.captureButton, selectedMode === "video" && styles.recordingButton, isRecording && selectedMode==='video' && styles.recordingBackground]}>
-            <View
-              style={[
-                styles.captureButtonInner,
-                selectedMode === "video" && isRecording && styles.recordingCaptureButtonInner, // Apply style for recording
-            ]}
-          />
-          </TouchableOpacity>
-          <View style={styles.switchCameraButtonContainer}>
-            {!isRecording && (
-              <TouchableOpacity onPress={switchCamera} style={styles.switchCameraButton}>
-                {/* <Icon name="sync" size={25} color="white" />  */}
-                <Image source={require('./assets/sync_icon.png')}/>
-              </TouchableOpacity>
-            )}
-            
-          </View> 
+              }}
+              style={[styles.captureButton, selectedMode === "video" && styles.recordingButton, isRecording && selectedMode==='video' && styles.recordingBackground]}>
+              <View
+                style={[
+                  styles.captureButtonInner,
+                  selectedMode === "video" && isRecording && styles.recordingCaptureButtonInner, // Apply style for recording
+              ]}/>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+        <View style={styles.switchCameraButtonContainer}>
+          {!isRecording && (
+            <TouchableOpacity onPress={switchCamera} style={styles.switchCameraButton}>
+              <Image source={require('./assets/sync_icon.png')}/>
+            </TouchableOpacity>
+          )}
         </View> 
+        
     </RNCamera>
-
-      <View style={{height: '4%', backgroundColor: 'black', bottom: '0%', justifyContent: 'center', }}>
-          <ScrollView
-            ref={buttonsScrollViewRef}
-            horizontal={true}
+    {/* Display captured pictures in a row */}
+    {isScanningEnabled && selectedMode === 'photo' && (
+      <View style={{backgroundColor: 'rgba(0,0,0,1)', height: '8%'}}>
+        <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle = {styles.buttonsScrollView}>
+            style={styles.pictureRow}
+            contentContainerStyle = {styles.pictureRowContent}>
 
-            <TouchableOpacity
-              style={[
-                styles.modeButton,
-                selectedMode === 'photo' ? styles.selectedModeButton : null,
-              ]}
-                onPress={() => handleModeSelect('photo')}>
-              <Text style={selectedMode === 'photo' ? styles.selectedModeText : styles.modeText}>Photo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.modeButton,
-                selectedMode === 'video' ? styles.selectedModeButton : null,
-              ]}
-              onPress={() => handleModeSelect('video')}>
-              <Text style={selectedMode === 'video' ? styles.selectedModeText : styles.modeText}>Video</Text>
-            </TouchableOpacity>
-
-          </ScrollView>
+            {capturedPictures.map((picture, index) => (
+              <View key={index} style={styles.pictureContainer}>
+                <TouchableOpacity
+                  onPress={() => openPicture(picture)}
+                >
+                  <Image source={{ uri: picture }} style={styles.pictureThumbnail} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => deleteItemFromRow(index)}
+                  style={styles.cancelIconContainer}
+                >
+                  <Image source={require('./assets/cancel_small_icon.png')}/>
+                  {/* <Text>Cancel</Text> */}
+                </TouchableOpacity>
+              </View>
+            ))}
+        </ScrollView>
       </View>
+    )}
+    
+    {/* Full-screen picture modal */}
+    <Modal visible={!!selectedPicture} transparent={true} onRequestClose={closePicture}>
+      <View style={styles.modalContainer}>
+        <TouchableOpacity style={styles.closeButton} onPress={closePicture}>
+          <Image source={require('./assets/cancel_icon.png')}/>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.saveButton} onPress={saveDocument} disabled = {isSaved ? true : false}>
+          <Text style={[styles.saveButtonText, {color: isSaved ? 'grey' : 'yellow'}]}>{isSaved ? "Saved" : "Save"}</Text>
+        </TouchableOpacity>
+        {selectedPicture && (
+          <Image
+            source={{ uri: selectedPicture }}
+            style={styles.fullScreenImage}
+          />
+        )}
+      </View>
+    </Modal>
+    <View style={{height: '4%', backgroundColor: 'black', bottom: '0%', justifyContent: 'center', }}>
+        <ScrollView
+          ref={buttonsScrollViewRef}
+          horizontal={true}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle = {styles.buttonsScrollView}>
+
+          <TouchableOpacity
+            style={[
+              styles.modeButton,
+              selectedMode === 'photo' ? styles.selectedModeButton : null,
+            ]}
+              onPress={() => handleModeSelect('photo')}>
+            <Text style={selectedMode === 'photo' ? styles.selectedModeText : styles.modeText}>Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.modeButton,
+              selectedMode === 'video' ? styles.selectedModeButton : null,
+            ]}
+            onPress={() => handleModeSelect('video')}>
+            <Text style={selectedMode === 'video' ? styles.selectedModeText : styles.modeText}>Video</Text>
+          </TouchableOpacity>
+
+        </ScrollView>
+    </View>
       
-      <SettingsModal
-        visible={showSettingModal}
-        selectedQuality={selectedQualityStream}
-        onClose={() => setShowSettingModal(false)}
-        onQualitySelect={handleQualitySelect }
-        onSavePath={handleSelectedPath}
-        isFramingLinesVisible={isFramingLinesVisible}
-        onFramingLinesToggle={() => setIsFramingLinesVisible(prev => !prev)} />     
+    <SettingsModal
+      visible={showSettingModal}
+      selectedQuality={selectedQualityStream}
+      onClose={() => setShowSettingModal(false)}
+      onQualitySelect={handleQualitySelect }
+      onSavePath={handleSelectedPath}
+      isFramingLinesVisible={isFramingLinesVisible}
+      onFramingLinesToggle={() => setIsFramingLinesVisible(prev => !prev)}
+      onSoundToggle={handleSoundToggle}
+      onCollageToggle={handleScanningToggle} />     
         
     </SafeAreaView>
   );
@@ -471,13 +605,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: 'rgba(0, 0, 0, 1)',
-    padding: '5%'
+    padding: '5%',
   },
   captureButton: {
     padding: 8,
     borderRadius: 50,
     borderWidth: 3,
     borderColor: 'white',
+    margin: 5
   },
   captureButtonInner: {
     width: 50,
@@ -493,11 +628,6 @@ const styles = StyleSheet.create({
   switchCameraButton: {
     padding: 16,
     color: 'white'
-  },
-  switchCameraText: {
-    color: 'white',
-    fontSize: 16,
-    textDecorationLine: 'underline',
   },
   framingLinesContainer: {
     flex: 1,
@@ -573,7 +703,71 @@ const styles = StyleSheet.create({
   },
   recordingBackground:{
     backgroundColor: 'white'
-  }
+  },
+  capturedImageContainer: {
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'white',
+    marginRight: 10, // Adjust spacing from capture button
+  },
+  capturedImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+  },
+  pictureRow: {
+    height: '1%',
+    marginTop: 0, 
+  },
+  pictureThumbnail: {
+    width: 50,
+    height: '100%',
+    marginHorizontal: 8,
+    borderRadius: 8,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'black',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    zIndex: 1,
+  },
+  saveButton: {
+    position: 'absolute',
+    top: 35,
+    right: 20,
+    zIndex: 1,
+  },
+  saveButtonText: {
+    color: 'yellow',
+    fontSize: 16,
+  },
+  fullScreenImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  pictureRowContent: {
+    flexDirection: 'row-reverse', 
+    alignItems: 'center',
+  },
+  pictureContainer: {
+    // marginRight: 10, // Adjust spacing between pictures
+    position: 'relative',
+  },
+  cancelIconContainer: {
+    position: 'absolute',
+    top: -5,
+    right: -3,
+    zIndex: 1, // Ensure the icon is above the picture
+    backgroundColor: 'transparent',
+    padding: 5
+  },
   
 });
 export default CameraScreen;

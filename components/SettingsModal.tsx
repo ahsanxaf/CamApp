@@ -13,8 +13,10 @@ interface SettingsModalProps{
     onClose: () => void;
     onQualitySelect: (selectedQuality: CameraQuality) => void;
     onSavePath: (path: string) => void;
-    isFramingLinesVisible: any,
-    onFramingLinesToggle: any
+    isFramingLinesVisible: any;
+    onFramingLinesToggle: any;
+    onSoundToggle: (isSoundEnabled: boolean) => void;
+    onCollageToggle: (isSoundEnabled: boolean) => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -24,7 +26,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     onQualitySelect,
     onSavePath,
     isFramingLinesVisible,
-    onFramingLinesToggle
+    onFramingLinesToggle,
+    onSoundToggle,
+    onCollageToggle
 }) => {
 
     const [showQualityOptions, setShowQualityOptions] = useState(false);
@@ -32,6 +36,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const [showStorageModal, setShowStorageModal] = useState(false);
     const [showQualityModal, setShowQualityModal] = useState(false);
     const [isFramingLinesEnables, setIsFramingLinesEnabled] = useState(false);
+    const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+    const [isCollageEnabled, setIsCollageEnabled] = useState(false);
 
 
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -42,6 +48,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         
     };
 
+    const handleSoundButtonPress = () => {
+        setIsSoundEnabled((prev) => !prev);
+        onSoundToggle(!isSoundEnabled); 
+    };
+    const handleCollageButtonPress = () => {
+        setIsCollageEnabled((prev) => !prev);
+        onCollageToggle(!isCollageEnabled); 
+    };
     const handleNamingSchemeButtonPress = () => {
         onClose();
         // setShowNamingScheme(true);
@@ -72,7 +86,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <TouchableOpacity style={{flex: 1}} onPress={handleOverlayPress} activeOpacity={1}>
                     <View style={[Styles.modalContainer, {height: modalContentHeight}]}>
                         <TouchableOpacity style={Styles.qualityButton} onPress={handleQualityButtonPress}>
-                            <Text style={Styles.qualityButtonText}>Quality Options</Text>
+                            <Text style={Styles.modalButtonTextDesign}>Quality Options</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={Styles.modalButtonDesign} onPress={handleNamingSchemeButtonPress}>
                             <Text style={Styles.modalButtonTextDesign}>Naming Scheme</Text>
@@ -83,14 +97,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <TouchableOpacity style={Styles.modalButtonDesign} onPress={handleShreddingButtonPress}>
                             <Text style={Styles.modalButtonTextDesign}>Shredding</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={Styles.modalButtonDesign}>
-                            <Text style={Styles.modalButtonTextDesign}>Sound</Text>
+                        <TouchableOpacity style={[Styles.modalButtonDesign]}
+                            onPress={handleSoundButtonPress}>
+                            <Text style={[Styles.modalButtonTextDesign, {color: isSoundEnabled ? 'yellow' : "white"}]}>
+                                {isSoundEnabled ? "Disable Shutter Sound" : "Enable Shutter Sound"} 
+                            </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={Styles.modalButtonDesign}>
-                            <Text style={Styles.modalButtonTextDesign}>Location</Text>
+                        <TouchableOpacity style={Styles.modalButtonDesign} onPress={handleCollageButtonPress}>
+                            <Text style={[Styles.modalButtonTextDesign, {color: isCollageEnabled ? 'yellow' : "white"}]}>
+                                {isCollageEnabled ? "Disable Scanner" : "Enable Scanner"}
+                            </Text>
                         </TouchableOpacity>
                         <View style={[Styles.toggleContainer, {width: '100%'}]}>
-                            <Text style={[Styles.modalButtonDesign, {marginTop: 0, color: 'yellow'}]}>Framing Lines</Text>
+                            <Text style={[Styles.modalButtonDesign, {marginTop: 0, color: 'white'}]}>Framing Lines</Text>
                             <Switch
                                 value={isFramingLinesVisible}
                                 onValueChange={onFramingLinesToggle}
@@ -102,12 +121,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     </View>
                 </TouchableOpacity>
             </Modal>
-            {/* <QualityPreviewFrame
-                visible={showQualityOptions}
-                selectedQuality={selectedQuality}
-                onClose={() => setShowQualityOptions(false)}
-                onQualitySelect={onQualitySelect}/> */}
-            <QualityModal visible={showQualityModal} onClose={() => setShowQualityModal(false)} onSelectQuality={onQualitySelect} SelectedQuality={selectedQuality} />
+            <QualityModal 
+                visible={showQualityModal} 
+                onClose={() => setShowQualityModal(false)} 
+                onSelectQuality={onQualitySelect} 
+                SelectedQuality={selectedQuality} />
 
             <View style={{flex:1}}>
                 <StorageModal 
@@ -131,7 +149,7 @@ const Styles = StyleSheet.create({
     },
     modalButtonTextDesign:{
         fontSize: 18,
-        color: 'yellow',
+        color: 'white',
         justifyContent: 'center',
         alignItems: 'center'
     },

@@ -40,6 +40,7 @@
     "react-native-sound-player": "^0.13.2",
     "react-native-static-safe-area-insets": "^2.2.0",
     "react-native-vector-icons": "^10.0.0",
+    "react-native-view-shot": "^3.7.0",
     "react-native-vision-camera": "^2.15.5",
     "react-navigation-shared-element": "^3.1.3"
   },
