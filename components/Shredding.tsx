@@ -63,7 +63,7 @@ const Shredding: React.FC = () => {
         Alert.alert('No such file or directory exists', 'Please select a file');
       }
     } catch (error) {
-      // setDeletionInProgress(false);
+      setDeletionInProgress(false);
       console.error('Error securely deleting file:', error);
     }
   };
