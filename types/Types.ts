@@ -22,4 +22,5 @@ export type RootStackParamList = {
         setNamingScheme: (scheme: CameraNamingScheme) => void;
     };
     Shredding: undefined;
+    Scanner: undefined;
 };

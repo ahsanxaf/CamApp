@@ -79,6 +79,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         onClose();
         navigation.navigate('Shredding');
     }
+    const  handleScannerButtonPress = () => {
+        onClose();
+        navigation.navigate('Scanner');
+    }
     
     return(
         <View>
@@ -103,11 +107,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 {isSoundEnabled ? "Disable Shutter Sound" : "Enable Shutter Sound"} 
                             </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={Styles.modalButtonDesign} onPress={handleCollageButtonPress}>
+                        {/* <TouchableOpacity style={Styles.modalButtonDesign} onPress={handleCollageButtonPress}>
                             <Text style={[Styles.modalButtonTextDesign, {color: isCollageEnabled ? 'yellow' : "white"}]}>
                                 {isCollageEnabled ? "Disable Scanner" : "Enable Scanner"}
                             </Text>
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
+                        {/* <TouchableOpacity style={Styles.modalButtonDesign} onPress={handleScannerButtonPress}>
+                            <Text style={Styles.modalButtonTextDesign}>Scanner</Text>
+                        </TouchableOpacity> */}
                         <View style={[Styles.toggleContainer, {width: '100%'}]}>
                             <Text style={[Styles.modalButtonDesign, {marginTop: 0, color: 'white'}]}>Framing Lines</Text>
                             <Switch
@@ -158,8 +165,8 @@ const Styles = StyleSheet.create({
         alignItems: 'flex-start',
         padding: 20,
         backgroundColor: 'rgba(0, 0, 0, 0.2)',
-        height: '50%',
-        marginTop: 55,
+        height: '80%',
+        marginTop: 50,
         },
     qualityButton: {
         alignItems: 'flex-start',

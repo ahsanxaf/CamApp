@@ -6,6 +6,7 @@ import NamingSchemeScreen from '../components/NamingSchemeScreen';
 import CameraScreen from '../CameraScreen';
 import {CameraNamingScheme, RootStackParamList} from '../types/Types';
 import Shredding from '../components/Shredding';
+import Scanner from '../components/Scanner';
 
 const stack = createStackNavigator<RootStackParamList>();
 
@@ -39,6 +40,10 @@ const AppNavigator: React.FC = () => {
                 <stack.Screen
                     name = 'Shredding'
                     component={Shredding}/>
+                {/* <stack.Screen
+                    name = 'Scanner'
+                    component={Scanner}
+                    options={{headerShown: true}}/> */}
             </stack.Navigator>
         </NavigationContainer>
     );
