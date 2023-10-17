@@ -12,8 +12,8 @@ import {
   Animated,
   Dimensions,
   Modal,
-  requireNativeComponent,
   Alert,
+  NativeModules
 } from 'react-native';
 import {BarCodeReadEvent, RNCamera, TakePictureResponse} from 'react-native-camera';
 import RNFS from 'react-native-fs';
@@ -23,6 +23,7 @@ import {FlashMode, CameraQuality} from './types/Types';
 import {useNamingScheme} from './contexts/NamingSchemeContext';
 import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import { PinchGestureHandler, State } from 'react-native-gesture-handler';
 // import CameraKitCameraScreen from 'react-native-camera-kit';
 
 const APP_ALBUM_NAME = 'CamApp';
@@ -62,6 +63,9 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   const [isScannerVisible, setIsScannerVisible] = useState(false);
   const [scannedQRCode, setScannedQRCode] = useState<string | null>(null);
   const [isGuidingBoxVisible, setIsGuidingBoxVisible] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState(0);
+  const [zoom, setZoom] = useState(0);
+  const CameraZoomModule = NativeModules.CameraZoomModule;
 
 
   const screenWidth = Dimensions.get('window').width;
@@ -70,6 +74,22 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
   useEffect(() => {
     StatusBar.setHidden(true);
     setSelectedMode('photo');
+
+    const handleZoomIn = () => {
+      const newZoomLevel = zoomLevel + 0.1; // Increase zoom level by 0.1
+      if (newZoomLevel <= 1) {
+        setZoomLevel(newZoomLevel); 
+      }
+    };
+    const handleZoomOut = () => {
+      const newZoomLevel = zoomLevel - 0.1; // Decrease zoom level by 0.1
+      if (newZoomLevel >= 0) {
+        setZoomLevel(newZoomLevel); 
+      }
+    };
+    handleZoomIn();
+    handleZoomOut();
+
   }, []);
 
   const requestStoragePermission = async () => {
@@ -142,7 +162,6 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
         newSequence += '_1';
       }
     } else {
-      // If the sequence doesn't contain an underscore, add "_1" to the end
       newSequence += '_1';
     }
 
@@ -468,92 +487,114 @@ const CameraScreen: React.FC<{route: ReactNode}> = ({route}) => {
       }
     }
   };
+  const handlePinch = (event: { nativeEvent: { state: number; scale: number; }; }) => {
+    if (event.nativeEvent.state === State.ACTIVE) {
+      const newZoom = zoom + event.nativeEvent.scale - 1;
+      console.log('aaaaa')
+      if (newZoom >= 0 && newZoom <= 1) {
+        setZoom(newZoom);
+        CameraZoomModule.setZoom(newZoom, (result: any) => {
+          if (result) {
+            console.log('Zoom set successfully.');
+          } else {
+            console.error('Failed to set zoom.');
+          }
+        });
+      }
+    }
+  };
+
   
 
   return (
     <SafeAreaView style={styles.container}>
-      <RNCamera
-        ref={cameraRef}
-        style={styles.cameraPreview}
-        type={selectedCamera}
-        captureAudio={true}
-        flashMode={flashMode}
-        onBarCodeRead={isGuidingBoxVisible ? handleBarCodeRead : undefined}
-        playSoundOnCapture={playSoundOnCapture}>
-        <CameraHeader
-          onPressSettings={handleSettingsPress}
-          onPressFlashToggle={toggleFlash}
-          flashMode={flashMode}
-        />
+      <PinchGestureHandler onGestureEvent={handlePinch} onHandlerStateChange={handlePinch}>
+          <RNCamera
+            ref={cameraRef}
+            style={styles.cameraPreview}
+            type={selectedCamera}
+            captureAudio={true}
+            flashMode={flashMode}
+            autoFocus={RNCamera.Constants.AutoFocus.on}
+            autoFocusPointOfInterest={{ x: 0.5, y: 0.5 }}
+            zoom={zoom}
+            onBarCodeRead={isGuidingBoxVisible ? handleBarCodeRead : undefined}
+            playSoundOnCapture={playSoundOnCapture}>
+            <CameraHeader
+              onPressSettings={handleSettingsPress}
+              onPressFlashToggle={toggleFlash}
+              flashMode={flashMode}
+            />
 
-        {isRecording && (
-          <View style={styles.timerContainer}>
-            <Text style={styles.timerText}>
-              {formatRecordingTime(recordingTime)}
-            </Text>
-          </View>
-        )}
+            {isRecording && (
+              <View style={styles.timerContainer}>
+                <Text style={styles.timerText}>
+                  {formatRecordingTime(recordingTime)}
+                </Text>
+              </View>
+            )}
 
-        {isFramingLinesVisible && (
-          <View style={styles.framingLinesContainer}>
-            <View style={[styles.verticalLine, {left: '33.3333%'}]} />
-            <View style={[styles.verticalLine, {left: '66.6666%'}]} />
-            <View style={[styles.horizontalLine, {top: '33.3333%'}]} />
-            <View style={[styles.horizontalLine, {top: '66.6666%'}]} />
-          </View>
-        )} 
+            {isFramingLinesVisible && (
+              <View style={styles.framingLinesContainer}>
+                <View style={[styles.verticalLine, {left: '33.3333%'}]} />
+                <View style={[styles.verticalLine, {left: '66.6666%'}]} />
+                <View style={[styles.horizontalLine, {top: '33.3333%'}]} />
+                <View style={[styles.horizontalLine, {top: '66.6666%'}]} />
+              </View>
+            )} 
 
-        {/* {isGuidingBoxVisible && ( // Show the guiding box when isGuidingBoxVisible is true
-          <View style={[styles.guidingBox, {width: guidingBoxSize, height: guidingBoxSize}]} />
-        )} */}
+            {/* {isGuidingBoxVisible && ( // Show the guiding box when isGuidingBoxVisible is true
+              <View style={[styles.guidingBox, {width: guidingBoxSize, height: guidingBoxSize}]} />
+            )} */}
 
-        <View style={styles.captureButtonContainer}>
-          <Animated.View
-            {...panResponder.panHandlers}
-            style={[
-              styles.captureButtonContainer,
-              {left: captureButtonPosition.x},
-            ]}>
-            <TouchableOpacity
-              onPress={() => {
-                if (selectedMode === 'photo') {
-                  takePicture();
-                } else if (selectedMode === 'video') {
-                  if (isRecording) {
-                    stopRecording();
-                  } else {
-                    startRecording();
-                  }
-                }
-              }}
-              style={[
-                styles.captureButton,
-                selectedMode === 'video' && styles.recordingButton,
-                isRecording &&
-                  selectedMode === 'video' &&
-                  styles.recordingBackground,
-              ]}>
-              <View
+            <View style={styles.captureButtonContainer}>
+              {/* <Animated.View
+                {...panResponder.panHandlers}
                 style={[
-                  styles.captureButtonInner,
-                  selectedMode === 'video' &&
+                  styles.captureButtonContainer,
+                  {left: captureButtonPosition.x},
+                ]}>
+              </Animated.View> */}
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedMode === 'photo') {
+                      takePicture();
+                    } else if (selectedMode === 'video') {
+                      if (isRecording) {
+                        stopRecording();
+                      } else {
+                        startRecording();
+                      }
+                    }
+                  }}
+                  style={[
+                    styles.captureButton,
+                    selectedMode === 'video' && styles.recordingButton,
                     isRecording &&
-                    styles.recordingCaptureButtonInner, // Apply style for recording
-                ]}
-              />
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
-        <View style={styles.switchCameraButtonContainer}>
-          {!isRecording && (
-            <TouchableOpacity
-              onPress={switchCamera}
-              style={styles.switchCameraButton}>
-              <Image source={require('./assets/sync_icon.png')} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </RNCamera>
+                      selectedMode === 'video' &&
+                      styles.recordingBackground,
+                  ]}>
+                  <View
+                    style={[
+                      styles.captureButtonInner,
+                      selectedMode === 'video' &&
+                        isRecording &&
+                        styles.recordingCaptureButtonInner, // Apply style for recording
+                    ]}
+                  />
+                </TouchableOpacity>
+            </View>
+            <View style={styles.switchCameraButtonContainer}>
+              {!isRecording && (
+                <TouchableOpacity
+                  onPress={switchCamera}
+                  style={styles.switchCameraButton}>
+                  <Image source={require('./assets/sync_icon.png')} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </RNCamera>
+      </PinchGestureHandler>
 
       {/* Display captured pictures in a row */}
       {isScanningEnabled && selectedMode === 'photo' && (

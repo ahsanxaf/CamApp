@@ -6,7 +6,7 @@ import NamingSchemeScreen from '../components/NamingSchemeScreen';
 import CameraScreen from '../CameraScreen';
 import {CameraNamingScheme, RootStackParamList} from '../types/Types';
 import Shredding from '../components/Shredding';
-import Scanner from '../components/Scanner';
+// import Scanner from '../components/Scanner';
 
 const stack = createStackNavigator<RootStackParamList>();
 

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {View, TouchableOpacity, Text, StyleSheet, Modal, Dimensions, useWindowDimensions, Switch} from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
 import {useNavigation, RouteProp} from '@react-navigation/native';
 import { StackNavigationProp } from "@react-navigation/stack";
 import StorageModal from "./StorageModal";
